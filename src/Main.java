@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.json.JSONObject;
 import org.snmp4j.CommandResponder;
@@ -39,7 +41,13 @@ import org.snmp4j.util.ThreadPool;
 import javax.swing.*;
 
 public class Main implements CommandResponder {
+    static Map<String, NetpingWidget> map = new HashMap<>();
+
+    static JPanel gridPanel;
+    static TrayIcon trayIcon;
+
     public Main() {
+        createGUI();
     }
 
     private static String loadDataFromfile(String fileNameIn){
@@ -61,6 +69,7 @@ public class Main implements CommandResponder {
 
         if(data.isEmpty()){
             JSONObject json = new JSONObject();
+            json.put("ip-address", "0.0.0.0");
             json.put("port", "162");
 
             saveDataToFile(fileNameIn, json.toString());
@@ -68,7 +77,17 @@ public class Main implements CommandResponder {
             return json;
         }
 
-        return new JSONObject(data);
+        JSONObject json = new JSONObject(data);
+
+        if(!json.has("ip-address")){
+            json.put("ip-address", "0.0.0.0");
+        }
+
+        if(!json.has("port")){
+            json.put("port", "162");
+        }
+
+        return json;
     }
 
     private static void saveDataToFile(String fileNameIn, String dataIn){
@@ -101,7 +120,7 @@ public class Main implements CommandResponder {
 
         JSONObject json = loadJSON("config.json");
 
-        String address = "localhost/" + json.getString("port");
+        String address = json.getString("ip-address") + "/" + json.getString("port");
 
         Main snmp4jTrapReceiver = new Main();
         try {
@@ -109,6 +128,7 @@ public class Main implements CommandResponder {
         } catch (IOException e) {
             System.err.println("Error in Listening for Trap");
             System.err.println("Exception Message = " + e.getMessage());
+            JOptionPane.showMessageDialog(null, e.getMessage(), "Error in Listening for Trap", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -136,13 +156,15 @@ public class Main implements CommandResponder {
 
         //Create Target
         CommunityTarget target = new CommunityTarget();
-        target.setCommunity(new OctetString("qwe"));
+        target.setCommunity(new OctetString("public"));
 
         Snmp snmp = new Snmp(mtDispatcher, transport);
         snmp.addCommandResponder(this);
 
         transport.listen();
         System.out.println("Listening on " + address);
+        String message = "trap receiver executed!\nListening on " + address;
+        trayIcon.displayMessage("trap receiver", message, TrayIcon.MessageType.INFO);
 
         try {
             this.wait();
@@ -185,6 +207,7 @@ public class Main implements CommandResponder {
         }
     }
 
+
     private static void setTrayIcon() {
         PopupMenu trayMenu = new PopupMenu();
         MenuItem item = new MenuItem("Exit");
@@ -197,7 +220,7 @@ public class Main implements CommandResponder {
         trayMenu.add(item);
 
         Image icon = Toolkit.getDefaultToolkit().getImage("icon.png");
-        TrayIcon trayIcon = new TrayIcon(icon, "trap receiver", trayMenu);
+        trayIcon = new TrayIcon(icon, "trap receiver", trayMenu);
         trayIcon.setImageAutoSize(true);
 
         SystemTray tray = SystemTray.getSystemTray();
@@ -206,7 +229,66 @@ public class Main implements CommandResponder {
         } catch (AWTException e) {
             e.printStackTrace();
         }
+    }
 
-        trayIcon.displayMessage("trap receiver", "trap receiver executed!", TrayIcon.MessageType.INFO);
+
+    private static void addNetping(String nameIn, String ipAddressIn){
+        NetpingWidget netping = new NetpingWidget(nameIn, ipAddressIn);
+        map.put(nameIn, netping);
+
+        netping.setOpened(false);
+
+        gridPanel.add(netping);
+        gridPanel.revalidate();
+        gridPanel.repaint();
+    }
+
+    private static void setNetpingOpened(String netpingNameIn, boolean openedIn){
+        map.get(netpingNameIn).setOpened(openedIn);
+    }
+
+    private static void setNetpingDisconnected(String netpingNameIn){
+        map.get(netpingNameIn).setDisconnected();
+    }
+
+
+    private static void createGUI()
+    {
+        JFrame frame = new JFrame("Netping мониторинг");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        JPanel rootPanel = new JPanel();
+        rootPanel.setLayout(new BoxLayout(rootPanel, BoxLayout.Y_AXIS));
+
+        JPanel toolPanel = new JPanel();
+        JButton addButton = new JButton("добавить");
+        JButton deleteButton = new JButton("удалить");
+        toolPanel.add(addButton);
+        toolPanel.add(deleteButton);
+
+        addButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                new AddNetpingWindow(new AddNetpingInterface() {
+                    @Override
+                    public void add(String deviceNameIn, String ipAddressIn) {
+                        addNetping(deviceNameIn, ipAddressIn);
+                    }
+                });
+            }
+        });
+
+        gridPanel = new JPanel();
+        gridPanel.setLayout(new GridLayout(5, 5));
+
+        addNetping("ХАДТ эстакада", "192.168.1.214");
+        addNetping("пристанционный узел", "192.168.1.207");
+
+        rootPanel.add(toolPanel);
+        rootPanel.add(gridPanel);
+
+        frame.getContentPane().add(rootPanel);
+        frame.pack();
+        frame.setVisible(true);
     }
 }
