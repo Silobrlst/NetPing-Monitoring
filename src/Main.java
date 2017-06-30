@@ -5,11 +5,13 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TimerTask;
 
 import org.json.JSONObject;
 import org.snmp4j.CommandResponder;
@@ -20,17 +22,12 @@ import org.snmp4j.MessageDispatcherImpl;
 import org.snmp4j.MessageException;
 import org.snmp4j.PDU;
 import org.snmp4j.Snmp;
+import org.snmp4j.event.ResponseEvent;
 import org.snmp4j.log.LogFactory;
-import org.snmp4j.mp.MPv1;
-import org.snmp4j.mp.MPv2c;
-import org.snmp4j.mp.StateReference;
-import org.snmp4j.mp.StatusInformation;
+import org.snmp4j.mp.*;
 import org.snmp4j.security.Priv3DES;
 import org.snmp4j.security.SecurityProtocols;
-import org.snmp4j.smi.OctetString;
-import org.snmp4j.smi.TcpAddress;
-import org.snmp4j.smi.TransportIpAddress;
-import org.snmp4j.smi.UdpAddress;
+import org.snmp4j.smi.*;
 import org.snmp4j.tools.console.SnmpRequest;
 import org.snmp4j.transport.AbstractTransportMapping;
 import org.snmp4j.transport.DefaultTcpTransportMapping;
@@ -41,13 +38,30 @@ import org.snmp4j.util.ThreadPool;
 import javax.swing.*;
 
 public class Main implements CommandResponder {
-    static Map<String, NetpingWidget> map = new HashMap<>();
+    static OID oid;
+    static OID getIO1oid;
+    static JSONObject config;
 
+    static Snmp snmp;
+
+    static Map<String, NetpingWidget> ipMap = new HashMap<>();
+    static Map<String, Timer> timersMap = new HashMap<>();
+
+    static JFrame frame;
     static JPanel gridPanel;
     static TrayIcon trayIcon;
 
     public Main() {
         createGUI();
+
+        JSONObject json = loadJSON("config.json");
+        JSONObject netpings = json.getJSONObject("netpings");
+
+        for(String ip: netpings.keySet()){
+            addNetping(netpings.getString(ip), ip);
+        }
+
+        frame.pack();
     }
 
     private static String loadDataFromfile(String fileNameIn){
@@ -67,24 +81,52 @@ public class Main implements CommandResponder {
     private static JSONObject loadJSON(String fileNameIn){
         String data = loadDataFromfile(fileNameIn);
 
+        JSONObject json;
         if(data.isEmpty()){
-            JSONObject json = new JSONObject();
-            json.put("ip-address", "0.0.0.0");
-            json.put("port", "162");
-
-            saveDataToFile(fileNameIn, json.toString());
-
-            return json;
+            json = new JSONObject();
+        }else{
+            json = new JSONObject(data);
         }
 
-        JSONObject json = new JSONObject(data);
+        boolean saveFile = false;
 
         if(!json.has("ip-address")){
             json.put("ip-address", "0.0.0.0");
+            saveFile=true;
         }
 
-        if(!json.has("port")){
-            json.put("port", "162");
+        if(!json.has("netpingSNMPport")){
+            json.put("netpingSNMPport", "161");
+            saveFile=true;
+        }
+
+        if(!json.has("trapReceivePort")){
+            json.put("trapReceivePort", "162");
+            saveFile=true;
+        }
+
+        if(!json.has("oid")){
+            json.put("oid", "1.3.6.1.4.1.25728.8900.2.2.0");
+            saveFile=true;
+        }
+
+        if(!json.has("getIO1")){
+            json.put("getIO1", "1.3.6.1.4.1.25728.8900.1.1.2.1");
+            saveFile=true;
+        }
+
+        if(!json.has("community")){
+            json.put("community", "SWITCH");
+            saveFile=true;
+        }
+
+        if(!json.has("netpings")){
+            json.put("netpings", new JSONObject());
+            saveFile=true;
+        }
+
+        if(saveFile){
+            saveDataToFile(fileNameIn, json.toString(5));
         }
 
         return json;
@@ -118,9 +160,14 @@ public class Main implements CommandResponder {
     public static void main(String[] args) {
         setTrayIcon();
 
-        JSONObject json = loadJSON("config.json");
+        snmp = null;
 
-        String address = json.getString("ip-address") + "/" + json.getString("port");
+        config = loadJSON("config.json");
+
+        String address = config.getString("ip-address") + "/" + config.getString("trapReceivePort");
+
+        oid = new OID(config.getString("oid"));
+        getIO1oid = new OID(config.getString("getIO1"));
 
         Main snmp4jTrapReceiver = new Main();
         try {
@@ -156,15 +203,19 @@ public class Main implements CommandResponder {
 
         //Create Target
         CommunityTarget target = new CommunityTarget();
-        target.setCommunity(new OctetString("public"));
+        target.setCommunity(new OctetString(config.getString("community")));
 
-        Snmp snmp = new Snmp(mtDispatcher, transport);
+        snmp = new Snmp(mtDispatcher, transport);
         snmp.addCommandResponder(this);
 
         transport.listen();
-        System.out.println("Listening on " + address);
+        System.out.println("Listening traps on " + address);
         String message = "trap receiver executed!\nListening on " + address;
         trayIcon.displayMessage("trap receiver", message, TrayIcon.MessageType.INFO);
+
+        for(String ip: ipMap.keySet()){
+            checkNetpingOpened(ip);
+        }
 
         try {
             this.wait();
@@ -181,10 +232,18 @@ public class Main implements CommandResponder {
         PDU pdu = cmdRespEvent.getPDU();
         if (pdu != null) {
 
-            System.out.println("Trap Type = " + pdu.getType());
-            System.out.println("Variable Bindings = " + pdu.getVariableBindings());
+            if(pdu.getVariable(oid) != null){
+                int opened = pdu.getVariable(oid).toInt();
 
-            JOptionPane.showMessageDialog(null, pdu.toString(), "Trap received!", JOptionPane.INFORMATION_MESSAGE);
+                String ipPort = cmdRespEvent.getPeerAddress().toString();
+                String ip = ipPort.split("/")[0];
+
+                if(opened == 0){
+                    setNetpingOpened(ip, false);
+                }else{
+                    setNetpingOpened(ip, true);
+                }
+            }
 
             int pduType = pdu.getType();
             if ((pduType != PDU.TRAP) && (pduType != PDU.V1TRAP) && (pduType != PDU.REPORT)
@@ -232,29 +291,120 @@ public class Main implements CommandResponder {
     }
 
 
+    private static void addNetpingToConfig(String nameIn, String ipAddressIn){
+        JSONObject json = loadJSON("config.json");
+        JSONObject netpings = json.getJSONObject("netpings");
+
+        netpings.put(ipAddressIn, nameIn);
+
+        saveDataToFile("config.json", json.toString(5));
+    }
+
     private static void addNetping(String nameIn, String ipAddressIn){
         NetpingWidget netping = new NetpingWidget(nameIn, ipAddressIn);
-        map.put(nameIn, netping);
+        ipMap.put(ipAddressIn, netping);
 
-        netping.setOpened(false);
+        System.out.println(ipAddressIn + ": " + nameIn);
+
+        addNetpingToConfig(nameIn, ipAddressIn);
 
         gridPanel.add(netping);
         gridPanel.revalidate();
         gridPanel.repaint();
+
+        if(snmp != null){
+            checkNetpingOpened(ipAddressIn);
+        }
     }
 
-    private static void setNetpingOpened(String netpingNameIn, boolean openedIn){
-        map.get(netpingNameIn).setOpened(openedIn);
+    private static void setNetpingOpened(String ipAddressIn, boolean openedIn){
+        ipMap.get(ipAddressIn).setOpened(openedIn);
+    }
+
+    private static void setNetpingChecking(String ipAddressIn){
+        ipMap.get(ipAddressIn).setChecking();
     }
 
     private static void setNetpingDisconnected(String netpingNameIn){
-        map.get(netpingNameIn).setDisconnected();
+        ipMap.get(netpingNameIn).setDisconnected();
+    }
+
+
+    private static boolean checkNetpingOpened(String ipAddressIn) {
+        PDU pdu = new PDU();
+        pdu.add(new VariableBinding(oid));
+        pdu.setType(PDU.GET);
+        pdu.setRequestID(new Integer32(1));
+
+        // Create Target Address object
+        CommunityTarget comtarget = new CommunityTarget();
+        comtarget.setCommunity(new OctetString(config.getString("community")));
+        comtarget.setVersion(SnmpConstants.version1);
+        comtarget.setAddress(new UdpAddress(ipAddressIn + "/" + config.getString("netpingSNMPport")));
+        comtarget.setRetries(2);
+        comtarget.setTimeout(1000);
+
+        System.out.println(config.getString("community"));
+        System.out.println(ipAddressIn);
+
+        System.out.println("Sending Request to Agent...");
+        setNetpingChecking(ipAddressIn);
+
+        try{
+            ResponseEvent response = snmp.get(pdu, comtarget);
+
+            // Process Agent Response
+            if (response != null)
+            {
+                System.out.println("Got Response from Agent");
+                PDU responsePDU = response.getResponse();
+
+                if (responsePDU != null)
+                {
+                    int errorStatus = responsePDU.getErrorStatus();
+                    int errorIndex = responsePDU.getErrorIndex();
+                    String errorStatusText = responsePDU.getErrorStatusText();
+
+                    if (errorStatus == PDU.noError)
+                    {
+                        if(responsePDU.getVariable(getIO1oid) != null) {
+                            int opened = responsePDU.getVariable(getIO1oid).toInt();
+
+                            if(opened == 0){
+                                setNetpingOpened(ipAddressIn, false);
+                            }else{
+                                setNetpingOpened(ipAddressIn, true);
+                            }
+                        }
+                    }else{
+                        System.out.println("Error: Request Failed");
+                        System.out.println("Error Status = " + errorStatus);
+                        System.out.println("Error Index = " + errorIndex);
+                        System.out.println("Error Status Text = " + errorStatusText);
+                    }
+                }
+                else
+                {
+                    System.out.println("Error: Response PDU is null");
+                    setNetpingDisconnected(ipAddressIn);
+                }
+            }
+            else
+            {
+                System.out.println("Error: Agent Timeout... ");
+                setNetpingDisconnected(ipAddressIn);
+            }
+        }catch(IOException ex){
+            ex.printStackTrace();
+        }
+
+        return true;
     }
 
 
     private static void createGUI()
     {
-        JFrame frame = new JFrame("Netping мониторинг");
+        frame = new JFrame("Netping мониторинг");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         JPanel rootPanel = new JPanel();
@@ -281,8 +431,8 @@ public class Main implements CommandResponder {
         gridPanel = new JPanel();
         gridPanel.setLayout(new GridLayout(5, 5));
 
-        addNetping("ХАДТ эстакада", "192.168.1.214");
-        addNetping("пристанционный узел", "192.168.1.207");
+        //addNetping("ХАДТ эстакада", "192.168.1.214");
+        //addNetping("пристанционный узел", "192.168.1.207");
 
         rootPanel.add(toolPanel);
         rootPanel.add(gridPanel);
@@ -291,4 +441,5 @@ public class Main implements CommandResponder {
         frame.pack();
         frame.setVisible(true);
     }
+
 }

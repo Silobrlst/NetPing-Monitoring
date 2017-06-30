@@ -44,4 +44,16 @@ public class NetpingWidget extends JPanel {
         Color color = new Color(255, 100, 100);
         rootPanel.setBackground(color);
     }
+
+    public void setChecking(){
+        status.setText("проверка...");
+    }
+
+    public String getDeviceName(){
+        return deviceName.getText();
+    }
+
+    public String getIpAddress(){
+        return ipAddress.getText();
+    }
 }
