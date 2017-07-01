@@ -1,48 +1,43 @@
 import javax.swing.*;
 import java.awt.*;
 
-/**
- * Created by trushkov.anton on 29.06.2017.
- */
 public class NetpingWidget extends JPanel {
     private JLabel deviceName;
     private JLabel status;
     private JPanel rootPanel;
     private JLabel ipAddress;
+    private JPanel ipStatePanel;
 
-    NetpingWidget(String deviceNameIn, String ipAddressIn){
+    private NetpingStateEnum state;
+
+    NetpingWidget(String ipAddressIn, String deviceNameIn){
         deviceName.setText(deviceNameIn);
         ipAddress.setText(ipAddressIn);
         this.add(rootPanel);
-    }
-
-    NetpingWidget(){
-        this.add(rootPanel);
+        this.setAlignmentX(Component.LEFT_ALIGNMENT);
     }
 
     public void setDeviceName(String deviceNameIn){
         deviceName.setText(deviceNameIn);
     }
 
-    public void setOpened(boolean opened){
-        if(opened){
-            status.setText("открыт");
-            Color color = new Color(255, 250, 0);
-            rootPanel.setBackground(color);
-        }else{
-            status.setText("закрыт");
-            Color color = new Color(100, 255, 100);
-            rootPanel.setBackground(color);
-        }
-    }
-    public void setOpened(){
-        setOpened(true);
-    }
+    public void setState(NetpingStateEnum stateIn){
+        state = stateIn;
 
-    public void setDisconnected(){
-        status.setText("нет связи");
-        Color color = new Color(255, 100, 100);
-        rootPanel.setBackground(color);
+        switch(state){
+            case Opened:
+                status.setText("открыт");
+                setColor(new Color(255, 250, 0));
+                break;
+            case Closed:
+                status.setText("закрыт");
+                setColor(new Color(100, 255, 100));
+                break;
+            case Disconneted:
+                status.setText("нет связи");
+                setColor(new Color(255, 100, 100));
+                break;
+        }
     }
 
     public void setChecking(){
@@ -53,7 +48,13 @@ public class NetpingWidget extends JPanel {
         return deviceName.getText();
     }
 
-    public String getIpAddress(){
-        return ipAddress.getText();
+    public NetpingStateEnum getState(){
+        return state;
+    }
+
+
+    private void setColor(Color colorIn){
+        rootPanel.setBackground(colorIn);
+        ipStatePanel.setBackground(colorIn);
     }
 }
