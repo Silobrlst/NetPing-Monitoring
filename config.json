@@ -1,17 +1,27 @@
 {
      "netpings": {
-          "6.6.6.6": "oerijtiret",
-          "1.1.1.1": "ejhfjhdf",
-          "2.2.2.2": "a;lskd",
-          "3.3.3.3": "lkjdfaskljd",
-          "12.2.2.2": "eorituerotiueorituiwer",
-          "12.123.12.12": "sjdjfjk123123wsref34234erqw34lkj"
+          "1.1.1.1": "qwe",
+          "1.1.1.10": "qwe",
+          "1.1.1.2": "qwe",
+          "1.1.1.11": "qwe",
+          "1.1.1.3": "qwe",
+          "1.1.1.4": "qwe",
+          "1.1.1.5": "qwe",
+          "1.1.1.6": "qwe",
+          "1.1.1.12": "qwe",
+          "1.1.1.13": "qwe",
+          "2.2.2.2": "weqweuhy",
+          "1.1.1.7": "qwe",
+          "1.1.1.8": "qwe",
+          "1.1.1.9": "qwe"
      },
      "getIo1OID": "1.3.6.1.4.1.25728.8900.1.1.2.1",
-     "checkTime": 10,
+     "checkTime": 5,
      "ipAddress": "0.0.0.0",
      "snmpPort": "161",
+     "style": "Nimbus",
      "snmpTrapsPort": "8001",
      "trapOID": "1.3.6.1.4.1.25728.8900.2.2.0",
-     "community": "SWITCH"
+     "community": "SWITCH",
+     "trayIcon": false
 }

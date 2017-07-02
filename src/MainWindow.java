@@ -29,6 +29,10 @@ public class MainWindow extends JFrame implements CommandResponder {
     private JButton settingsButton;
     private JTextField checkTime;
 
+    private final String appName = "Netping мониторинг";
+    private TrayIcon trayIcon;
+    private boolean trayIconVisible;
+
     private Timer checkTimer;
 
     private SettingsWindow settingsWindow;
@@ -44,11 +48,30 @@ public class MainWindow extends JFrame implements CommandResponder {
     private ExecutorService executor;
 
 
-    private void initLogger(){
+    private void initTrayIcon() {
+        PopupMenu trayMenu = new PopupMenu();
+
+        MenuItem item = new MenuItem("Показать");
+        item.addActionListener(e -> this.setVisible(true));
+        trayMenu.add(item);
+
+        item = new MenuItem("Настройки");
+        item.addActionListener(e -> settingsWindow.setVisible(true));
+        trayMenu.add(item);
+
+        item = new MenuItem("Выход");
+        item.addActionListener(e -> System.exit(0));
+        trayMenu.add(item);
+
+        Image icon = Toolkit.getDefaultToolkit().getImage("icon.png");
+        trayIcon = new TrayIcon(icon, "Netping мониторинг", trayMenu);
+    }
+
+    private void initLogger() {
         logger = LogManager.getFormatterLogger("MainWindow");
     }
 
-    private void init(){
+    private void init() {
         initLogger();
 
         snmp = null;
@@ -59,10 +82,26 @@ public class MainWindow extends JFrame implements CommandResponder {
         oid = new OID(snmpSettings.trapOID);
         getIO1oid = new OID(snmpSettings.getIo1OID);
 
+        try {
+            for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+                if (settingsLoader.getStyle().equals(info.getName())) {
+                    UIManager.setLookAndFeel(info.getClassName());
+                    SwingUtilities.updateComponentTreeUI(this);
+                    this.pack();
+                    break;
+                }
+            }
+        } catch (Exception ex) {
+            // If Nimbus is not available, you can set the GUI to another look and feel.
+        }
+
+        trayIconVisible = false;
+        setTrayIconVisible(settingsLoader.isTrayIcon());
+
         checkTime.setText(Integer.toString(settingsLoader.getCheckTime()));
 
         ipMap = settingsLoader.getNetpingWidgetsMap();
-        for(String ip: ipMap.keySet()){
+        for (String ip : ipMap.keySet()) {
             netpingGrid.add(ipMap.get(ip));
             netpingGrid.revalidate();
             netpingGrid.repaint();
@@ -70,22 +109,40 @@ public class MainWindow extends JFrame implements CommandResponder {
         }
 
         settingsWindow = new SettingsWindow(settingsLoader, () -> {
+            try {
+                for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+                    if (settingsLoader.getStyle().equals(info.getName())) {
+                        UIManager.setLookAndFeel(info.getClassName());
+                        SwingUtilities.updateComponentTreeUI(this);
+                        this.pack();
+                        break;
+                    }
+                }
+            } catch (Exception ex) {
+                // If Nimbus is not available, you can set the GUI to another look and feel.
+            }
+
+            setTrayIconVisible(settingsLoader.isTrayIcon());
+
             Map<String, String> map = settingsLoader.getNetpingIpNameMap();
 
             //удаляем лишние
-            for(String ip: ipMap.keySet()){
-                if(!map.containsKey(ip)){
+            for (String ip : ipMap.keySet()) {
+                if (!map.containsKey(ip)) {
                     deleteNetping(ip);
                 }
             }
 
             //добавляем новые или изменяем существующие
-            for(String ip: map.keySet()){
+            for (String ip : map.keySet()) {
                 setNetping(ip, map.get(ip));
             }
         });
 
         settingsButton.addActionListener(e -> settingsWindow.setVisible(true));
+
+        //при завершении програмыы
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> logger.info("мониторинг остановлен")));
 
         try {
             this.listen(new UdpAddress(address));
@@ -97,16 +154,21 @@ public class MainWindow extends JFrame implements CommandResponder {
     }
 
 
-    private MainWindow(){
-        this.setTitle("Netping мониторинг");
-        this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+    private MainWindow() {
+        this.setTitle(appName);
+
+        initTrayIcon();
 
         checkTime.addActionListener(e -> {
-            int delay = Integer.parseInt(checkTime.getText());
+            if (checkTime.getText().matches("^[1-9]\\d*")) {
+                int delay = Integer.parseInt(checkTime.getText());
 
-            settingsLoader.setCheckTime(delay);
-            settingsLoader.saveConfig();
-            checkTimer.setDelay(delay*1000);
+                settingsLoader.setCheckTime(delay);
+                settingsLoader.saveConfig();
+                checkTimer.setDelay(delay * 1000);
+            } else {
+                checkTime.setText(Integer.toString(settingsLoader.getCheckTime()));
+            }
         });
 
         GridLayout gridLayout = new GridLayout(5, 5);
@@ -153,14 +215,14 @@ public class MainWindow extends JFrame implements CommandResponder {
 
         transport.listen();
         String message = "прием SNMP-ловушек: " + address;
-        logger.info("запущен мониторинг " + address);
-        System.out.println(message);
+        logger.info("мониторинг запущен " + address);
+        trayIcon.displayMessage(appName, "запущен", TrayIcon.MessageType.INFO);
         appStatus.setText(message);
 
         executor = Executors.newFixedThreadPool(25);
         checkAll();
 
-        checkTimer = new Timer(settingsLoader.getCheckTime()*1000, e -> checkAll(false));
+        checkTimer = new Timer(settingsLoader.getCheckTime() * 1000, e -> checkAll(false));
         checkTimer.start();
 
         try {
@@ -171,19 +233,18 @@ public class MainWindow extends JFrame implements CommandResponder {
     }
 
     public synchronized void processPdu(CommandResponderEvent cmdRespEvent) {
-        System.out.println("Received PDU...");
         PDU pdu = cmdRespEvent.getPDU();
         if (pdu != null) {
 
-            if(pdu.getVariable(oid) != null){
+            if (pdu.getVariable(oid) != null) {
                 int opened = pdu.getVariable(oid).toInt();
 
                 String ipPort = cmdRespEvent.getPeerAddress().toString();
                 String ip = ipPort.split("/")[0];
 
-                if(opened == 0){
+                if (opened == 0) {
                     setNetpingState(ip, NetpingStateEnum.Opened);
-                }else{
+                } else {
                     setNetpingState(ip, NetpingStateEnum.Closed);
                 }
             }
@@ -210,14 +271,37 @@ public class MainWindow extends JFrame implements CommandResponder {
     }
 
 
-    private void setNetping(String ipAddressIn, String nameIn){
-        if(ipMap.containsKey(ipAddressIn)){
-            if(ipMap.get(ipAddressIn).getDeviceName().compareTo(nameIn) != 0){
+    private void setTrayIconVisible(boolean visibleIn){
+        SystemTray tray = SystemTray.getSystemTray();
+
+        if(visibleIn){
+            try {
+                if(!trayIconVisible){
+                    tray.add(trayIcon);
+                    trayIconVisible = true;
+                }
+            } catch (AWTException e) {
+                e.printStackTrace();
+            }
+
+            this.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        }else{
+            tray.remove(trayIcon);
+            trayIconVisible = false;
+            this.setVisible(true);
+            this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        }
+    }
+
+
+    private void setNetping(String ipAddressIn, String nameIn) {
+        if (ipMap.containsKey(ipAddressIn)) {
+            if (ipMap.get(ipAddressIn).getDeviceName().compareTo(nameIn) != 0) {
                 String oldName = ipMap.get(ipAddressIn).getDeviceName();
                 ipMap.get(ipAddressIn).setDeviceName(nameIn);
                 logger.info("изменено имя netping " + ipAddressIn + " с " + oldName + " на " + nameIn);
             }
-        }else{
+        } else {
             NetpingWidget netping = new NetpingWidget(ipAddressIn, nameIn);
             netpingGrid.add(netping);
             netpingGrid.revalidate();
@@ -227,13 +311,13 @@ public class MainWindow extends JFrame implements CommandResponder {
 
             logger.info("добавлен netping " + ipAddressIn + " " + nameIn);
 
-            if(snmp != null){
+            if (snmp != null) {
                 checkNetping(ipAddressIn);
             }
         }
     }
 
-    private void deleteNetping(String ipAddressIn){
+    private void deleteNetping(String ipAddressIn) {
         String name = ipMap.get(ipAddressIn).getDeviceName();
         netpingGrid.remove(ipMap.get(ipAddressIn));
         netpingGrid.revalidate();
@@ -243,28 +327,41 @@ public class MainWindow extends JFrame implements CommandResponder {
         logger.info("удалён netping " + ipAddressIn + " " + name);
     }
 
-    private void setNetpingState(String ipAddressIn, NetpingStateEnum stateIn){
+    private void setNetpingState(String ipAddressIn, NetpingStateEnum stateIn) {
         NetpingWidget netpingWidget = ipMap.get(ipAddressIn);
-        NetpingStateEnum state = netpingWidget.getState();
+        NetpingStateEnum oldState = netpingWidget.getState();
 
-        if(stateIn != state){
+        if (stateIn != oldState) {
             ipMap.get(ipAddressIn).setState(stateIn);
 
-            switch (stateIn){
+            switch (stateIn) {
                 case Opened:
-                    logger.info("открыт шкаф " + ipAddressIn + " " + netpingWidget.getDeviceName());
+                    if (oldState == NetpingStateEnum.Disconneted) {
+                        logger.info("связь восстановлена, шкаф открыт " + ipAddressIn + " " + netpingWidget.getDeviceName());
+                        trayIcon.displayMessage(appName, "связь восстановлена, шкаф открыт\n"+netpingWidget.getDeviceName(), TrayIcon.MessageType.INFO);
+                    } else {
+                        logger.info("открыт шкаф " + ipAddressIn + " " + netpingWidget.getDeviceName());
+                        trayIcon.displayMessage(appName, "открыт шкаф\n"+netpingWidget.getDeviceName(), TrayIcon.MessageType.INFO);
+                    }
                     break;
                 case Closed:
-                    logger.info("закрыт шкаф " + ipAddressIn + " " + netpingWidget.getDeviceName());
+                    if (oldState == NetpingStateEnum.Disconneted) {
+                        logger.info("связь восстановлена, шкаф закрыт " + ipAddressIn + " " + netpingWidget.getDeviceName());
+                        trayIcon.displayMessage(appName, "связь восстановлена, шкаф закрыт\n"+netpingWidget.getDeviceName(), TrayIcon.MessageType.INFO);
+                    } else {
+                        logger.info("закрыт шкаф " + ipAddressIn + " " + netpingWidget.getDeviceName());
+                        trayIcon.displayMessage(appName, "закрыт шкаф\n" + netpingWidget.getDeviceName(), TrayIcon.MessageType.INFO);
+                    }
                     break;
                 case Disconneted:
                     logger.info("нет связи с " + ipAddressIn + " " + netpingWidget.getDeviceName());
+                    trayIcon.displayMessage(appName, "нет связи с "+netpingWidget.getDeviceName(), TrayIcon.MessageType.INFO);
                     break;
             }
         }
     }
 
-    private void setNetpingChecking(String ipAddressIn){
+    private void setNetpingChecking(String ipAddressIn) {
         ipMap.get(ipAddressIn).setChecking();
     }
 
@@ -283,76 +380,67 @@ public class MainWindow extends JFrame implements CommandResponder {
         comtarget.setRetries(2);
         comtarget.setTimeout(1000);
 
-        System.out.println("Sending Request to Agent...");
-        if(checkingIndicationIn){
+        if (checkingIndicationIn) {
             setNetpingChecking(ipAddressIn);
         }
 
-        try{
+        try {
             ResponseEvent response = snmp.get(pdu, comtarget);
 
             // Process Agent Response
-            if (response != null)
-            {
-                System.out.println("Got Response from Agent");
+            if (response != null) {
                 PDU responsePDU = response.getResponse();
 
-                if (responsePDU != null)
-                {
+                if (responsePDU != null) {
                     int errorStatus = responsePDU.getErrorStatus();
                     int errorIndex = responsePDU.getErrorIndex();
                     String errorStatusText = responsePDU.getErrorStatusText();
 
-                    if (errorStatus == PDU.noError)
-                    {
-                        if(responsePDU.getVariable(getIO1oid) != null) {
+                    if (errorStatus == PDU.noError) {
+                        if (responsePDU.getVariable(getIO1oid) != null) {
                             int opened = responsePDU.getVariable(getIO1oid).toInt();
 
-                            if(opened == 0){
+                            if (opened == 0) {
                                 setNetpingState(ipAddressIn, NetpingStateEnum.Closed);
-                            }else{
+                            } else {
                                 setNetpingState(ipAddressIn, NetpingStateEnum.Opened);
                             }
                         }
-                    }else{
+                    } else {
                         System.out.println("Error: Request Failed");
                         System.out.println("Error Status = " + errorStatus);
                         System.out.println("Error Index = " + errorIndex);
                         System.out.println("Error Status Text = " + errorStatusText);
                     }
-                }
-                else
-                {
-                    System.out.println("Error: Response PDU is null");
+                } else {
                     setNetpingState(ipAddressIn, NetpingStateEnum.Disconneted);
                 }
-            }
-            else
-            {
-                System.out.println("Error: Agent Timeout... ");
+            } else {
                 setNetpingState(ipAddressIn, NetpingStateEnum.Disconneted);
             }
-        }catch(IOException ex){
+        } catch (IOException ex) {
             ex.printStackTrace();
         }
     }
-    private void checkNetping(String ipAddressIn){
+
+    private void checkNetping(String ipAddressIn) {
         checkNetping(ipAddressIn, true);
     }
 
-    private void addCheckingTask(String ipAddressIn, boolean checkingIndicationIn){
+    private void addCheckingTask(String ipAddressIn, boolean checkingIndicationIn) {
         executor.submit(() -> {
             checkNetping(ipAddressIn, checkingIndicationIn);
             return null;
         });
     }
 
-    private void checkAll(boolean checkingIndicationIn){
-        for(String ip: ipMap.keySet()){
+    private void checkAll(boolean checkingIndicationIn) {
+        for (String ip : ipMap.keySet()) {
             addCheckingTask(ip, checkingIndicationIn);
         }
     }
-    private void checkAll(){
+
+    private void checkAll() {
         checkAll(true);
     }
 }

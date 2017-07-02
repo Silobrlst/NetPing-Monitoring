@@ -1,5 +1,4 @@
 import org.json.JSONObject;
-import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -111,6 +110,16 @@ public class SettingsLoader {
             saveFile=true;
         }
 
+        if(!json.has("trayIcon")){
+            json.put("trayIcon", true);
+            saveFile=true;
+        }
+
+        if(!json.has("style")){
+            json.put("style", "Metal");
+            saveFile=true;
+        }
+
         config = json;
 
         if(saveFile){
@@ -131,6 +140,8 @@ public class SettingsLoader {
         json.put("getIo1OID", "1.3.6.1.4.1.25728.8900.1.1.2.1");
         json.put("community", "SWITCH");
         json.put("netpings", new JSONObject());
+        json.put("trayIcon", true);
+        json.put("style", "Metal");
 
         config = json;
     }
@@ -213,5 +224,23 @@ public class SettingsLoader {
 
     public void setCheckTime(int checkTimeIn){
         config.put("checkTime", checkTimeIn);
+    }
+
+
+    public void setTrayIconVisible(boolean visibleIn){
+        config.put("trayIcon", visibleIn);
+    }
+
+    public boolean isTrayIcon(){
+        return config.getBoolean("trayIcon");
+    }
+
+
+    public void setStyle(String styleNameIn){
+        config.put("style", styleNameIn);
+    }
+
+    public String getStyle(){
+        return config.getString("style");
     }
 }

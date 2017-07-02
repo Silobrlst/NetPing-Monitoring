@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="debug">
+<Configuration status="info">
 <Appenders>
     <Console name="CONSOLE" target="SYSTEM_OUT">
         <PatternLayout pattern="%d{dd.MM.yyyy HH:mm:ss} - %m%n"/>
     </Console>
-    <File name="TEMP" fileName="netping.log">
+    <File name="FILE" fileName="netping.log">
         <PatternLayout pattern="%d{dd.MM.yyyy HH:mm:ss} - %m%n"/>
     </File>
     <Async name="ASYNC">
-        <AppenderRef ref="TEMP"/>
+        <AppenderRef ref="FILE"/>
         <AppenderRef ref="CONSOLE"/>
     </Async>
 </Appenders>
