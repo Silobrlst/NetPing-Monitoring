@@ -1,7 +1,6 @@
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.snmp4j.*;
-import org.snmp4j.event.ResponseEvent;
 import org.snmp4j.log.LogFactory;
 import org.snmp4j.mp.*;
 import org.snmp4j.security.Priv3DES;
@@ -15,12 +14,9 @@ import org.snmp4j.util.MultiThreadedMessageDispatcher;
 import org.snmp4j.util.ThreadPool;
 
 import javax.swing.*;
-import javax.swing.Timer;
 import java.awt.*;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class MainWindow extends JFrame implements CommandResponder {
     private JLabel appStatus;
@@ -33,19 +29,15 @@ public class MainWindow extends JFrame implements CommandResponder {
     private TrayIcon trayIcon;
     private boolean trayIconVisible;
 
-    private Timer checkTimer;
-
     private SettingsWindow settingsWindow;
 
     private Logger logger;
 
     private SettingsLoader settingsLoader;
     private OID oid;
-    private OID getIO1oid;
 
     private Snmp snmp;
     private Map<String, NetpingWidget> ipMap;
-    private ExecutorService executor;
 
 
     private void initTrayIcon() {
@@ -76,11 +68,15 @@ public class MainWindow extends JFrame implements CommandResponder {
 
         snmp = null;
 
+        ipMap = new HashMap<>();
+
         settingsLoader = new SettingsLoader("config.json");
         SnmpSettings snmpSettings = settingsLoader.getSnmpSettings();
         String address = snmpSettings.ipAddress + "/" + snmpSettings.snmpTrapsPort;
         oid = new OID(snmpSettings.trapOID);
-        getIO1oid = new OID(snmpSettings.getIo1OID);
+
+        GridLayout gridLayout = new GridLayout(settingsLoader.getGridRows(), settingsLoader.getGridCollumns());
+        netpingGrid.setLayout(gridLayout);
 
         try {
             for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
@@ -98,15 +94,7 @@ public class MainWindow extends JFrame implements CommandResponder {
         trayIconVisible = false;
         setTrayIconVisible(settingsLoader.isTrayIcon());
 
-        checkTime.setText(Integer.toString(settingsLoader.getCheckTime()));
-
-        ipMap = settingsLoader.getNetpingWidgetsMap();
-        for (String ip : ipMap.keySet()) {
-            netpingGrid.add(ipMap.get(ip));
-            netpingGrid.revalidate();
-            netpingGrid.repaint();
-            this.pack();
-        }
+        checkTime.setText(Integer.toString(settingsLoader.getCheckDelay()));
 
         settingsWindow = new SettingsWindow(settingsLoader, () -> {
             try {
@@ -165,14 +153,10 @@ public class MainWindow extends JFrame implements CommandResponder {
 
                 settingsLoader.setCheckTime(delay);
                 settingsLoader.saveConfig();
-                checkTimer.setDelay(delay * 1000);
             } else {
-                checkTime.setText(Integer.toString(settingsLoader.getCheckTime()));
+                checkTime.setText(Integer.toString(settingsLoader.getCheckDelay()));
             }
         });
-
-        GridLayout gridLayout = new GridLayout(5, 5);
-        netpingGrid.setLayout(gridLayout);
 
         appStatus.setText("Запуск...");
 
@@ -210,20 +194,27 @@ public class MainWindow extends JFrame implements CommandResponder {
         CommunityTarget target = new CommunityTarget();
         target.setCommunity(new OctetString(settingsLoader.getSnmpSettings().community));
 
-        snmp = new Snmp(mtDispatcher, transport);
+        TransportMapping transportGet = new DefaultUdpTransportMapping();
+        transportGet.listen();
+        snmp = new Snmp(mtDispatcher, transportGet);
         snmp.addCommandResponder(this);
+
+        Map<String, String> ipNameMap = settingsLoader.getNetpingIpNameMap();
+        for (String ip : ipNameMap.keySet()) {
+            NetpingWidget netpingWidget = new NetpingWidget(ip, ipNameMap.get(ip), this);
+
+            ipMap.put(ip, netpingWidget);
+            netpingGrid.add(netpingWidget);
+            netpingGrid.revalidate();
+            netpingGrid.repaint();
+            this.pack();
+        }
 
         transport.listen();
         String message = "прием SNMP-ловушек: " + address;
         logger.info("мониторинг запущен " + address);
         trayIcon.displayMessage(appName, "запущен", TrayIcon.MessageType.INFO);
         appStatus.setText(message);
-
-        executor = Executors.newFixedThreadPool(25);
-        checkAll();
-
-        checkTimer = new Timer(settingsLoader.getCheckTime() * 1000, e -> checkAll(false));
-        checkTimer.start();
 
         try {
             this.wait();
@@ -241,11 +232,12 @@ public class MainWindow extends JFrame implements CommandResponder {
 
                 String ipPort = cmdRespEvent.getPeerAddress().toString();
                 String ip = ipPort.split("/")[0];
+                NetpingWidget netpingWidget = ipMap.get(ip);
 
                 if (opened == 0) {
-                    setNetpingState(ip, NetpingStateEnum.Opened);
+                    netpingWidget.setState(NetpingStateEnum.Opened);
                 } else {
-                    setNetpingState(ip, NetpingStateEnum.Closed);
+                    netpingWidget.setState(NetpingStateEnum.Closed);
                 }
             }
 
@@ -302,7 +294,7 @@ public class MainWindow extends JFrame implements CommandResponder {
                 logger.info("изменено имя netping " + ipAddressIn + " с " + oldName + " на " + nameIn);
             }
         } else {
-            NetpingWidget netping = new NetpingWidget(ipAddressIn, nameIn);
+            NetpingWidget netping = new NetpingWidget(ipAddressIn, nameIn, this);
             netpingGrid.add(netping);
             netpingGrid.revalidate();
             netpingGrid.repaint();
@@ -310,10 +302,6 @@ public class MainWindow extends JFrame implements CommandResponder {
             ipMap.put(ipAddressIn, netping);
 
             logger.info("добавлен netping " + ipAddressIn + " " + nameIn);
-
-            if (snmp != null) {
-                checkNetping(ipAddressIn);
-            }
         }
     }
 
@@ -327,120 +315,24 @@ public class MainWindow extends JFrame implements CommandResponder {
         logger.info("удалён netping " + ipAddressIn + " " + name);
     }
 
-    private void setNetpingState(String ipAddressIn, NetpingStateEnum stateIn) {
-        NetpingWidget netpingWidget = ipMap.get(ipAddressIn);
-        NetpingStateEnum oldState = netpingWidget.getState();
 
-        if (stateIn != oldState) {
-            ipMap.get(ipAddressIn).setState(stateIn);
-
-            switch (stateIn) {
-                case Opened:
-                    if (oldState == NetpingStateEnum.Disconneted) {
-                        logger.info("связь восстановлена, шкаф открыт " + ipAddressIn + " " + netpingWidget.getDeviceName());
-                        trayIcon.displayMessage(appName, "связь восстановлена, шкаф открыт\n"+netpingWidget.getDeviceName(), TrayIcon.MessageType.INFO);
-                    } else {
-                        logger.info("открыт шкаф " + ipAddressIn + " " + netpingWidget.getDeviceName());
-                        trayIcon.displayMessage(appName, "открыт шкаф\n"+netpingWidget.getDeviceName(), TrayIcon.MessageType.INFO);
-                    }
-                    break;
-                case Closed:
-                    if (oldState == NetpingStateEnum.Disconneted) {
-                        logger.info("связь восстановлена, шкаф закрыт " + ipAddressIn + " " + netpingWidget.getDeviceName());
-                        trayIcon.displayMessage(appName, "связь восстановлена, шкаф закрыт\n"+netpingWidget.getDeviceName(), TrayIcon.MessageType.INFO);
-                    } else {
-                        logger.info("закрыт шкаф " + ipAddressIn + " " + netpingWidget.getDeviceName());
-                        trayIcon.displayMessage(appName, "закрыт шкаф\n" + netpingWidget.getDeviceName(), TrayIcon.MessageType.INFO);
-                    }
-                    break;
-                case Disconneted:
-                    logger.info("нет связи с " + ipAddressIn + " " + netpingWidget.getDeviceName());
-                    trayIcon.displayMessage(appName, "нет связи с "+netpingWidget.getDeviceName(), TrayIcon.MessageType.INFO);
-                    break;
-            }
-        }
+    public String getAppName(){
+        return appName;
     }
 
-    private void setNetpingChecking(String ipAddressIn) {
-        ipMap.get(ipAddressIn).setChecking();
+    public Snmp getSnmp(){
+        return snmp;
     }
 
-
-    private void checkNetping(String ipAddressIn, boolean checkingIndicationIn) {
-        PDU pdu = new PDU();
-        pdu.add(new VariableBinding(oid));
-        pdu.setType(PDU.GET);
-        pdu.setRequestID(new Integer32(1));
-
-        // Create Target Address object
-        CommunityTarget comtarget = new CommunityTarget();
-        comtarget.setCommunity(new OctetString(settingsLoader.getSnmpSettings().community));
-        comtarget.setVersion(SnmpConstants.version1);
-        comtarget.setAddress(new UdpAddress(ipAddressIn + "/" + settingsLoader.getSnmpSettings().snmpPort));
-        comtarget.setRetries(2);
-        comtarget.setTimeout(1000);
-
-        if (checkingIndicationIn) {
-            setNetpingChecking(ipAddressIn);
-        }
-
-        try {
-            ResponseEvent response = snmp.get(pdu, comtarget);
-
-            // Process Agent Response
-            if (response != null) {
-                PDU responsePDU = response.getResponse();
-
-                if (responsePDU != null) {
-                    int errorStatus = responsePDU.getErrorStatus();
-                    int errorIndex = responsePDU.getErrorIndex();
-                    String errorStatusText = responsePDU.getErrorStatusText();
-
-                    if (errorStatus == PDU.noError) {
-                        if (responsePDU.getVariable(getIO1oid) != null) {
-                            int opened = responsePDU.getVariable(getIO1oid).toInt();
-
-                            if (opened == 0) {
-                                setNetpingState(ipAddressIn, NetpingStateEnum.Closed);
-                            } else {
-                                setNetpingState(ipAddressIn, NetpingStateEnum.Opened);
-                            }
-                        }
-                    } else {
-                        System.out.println("Error: Request Failed");
-                        System.out.println("Error Status = " + errorStatus);
-                        System.out.println("Error Index = " + errorIndex);
-                        System.out.println("Error Status Text = " + errorStatusText);
-                    }
-                } else {
-                    setNetpingState(ipAddressIn, NetpingStateEnum.Disconneted);
-                }
-            } else {
-                setNetpingState(ipAddressIn, NetpingStateEnum.Disconneted);
-            }
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
+    public SettingsLoader getSettingsLoader(){
+        return settingsLoader;
     }
 
-    private void checkNetping(String ipAddressIn) {
-        checkNetping(ipAddressIn, true);
+    public Logger getLogger(){
+        return logger;
     }
 
-    private void addCheckingTask(String ipAddressIn, boolean checkingIndicationIn) {
-        executor.submit(() -> {
-            checkNetping(ipAddressIn, checkingIndicationIn);
-            return null;
-        });
-    }
-
-    private void checkAll(boolean checkingIndicationIn) {
-        for (String ip : ipMap.keySet()) {
-            addCheckingTask(ip, checkingIndicationIn);
-        }
-    }
-
-    private void checkAll() {
-        checkAll(true);
+    public TrayIcon getTrayIcon(){
+        return trayIcon;
     }
 }

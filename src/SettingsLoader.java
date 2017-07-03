@@ -14,8 +14,45 @@ public class SettingsLoader {
     private String configFileName;
     private JSONObject config;
 
+    private Map<String, Object> defaultParametersMap;
+    private static final String ipAddress = "ipAddress";
+    private static final String snmpPort = "snmpPort";
+    private static final String snmpTrapsPort = "snmpTrapsPort";
+    private static final String trapOID = "trapOID";
+    private static final String getIo1OID = "getIo1OID";
+    private static final String community = "community";
+    private static final String checkDelay = "checkDelay";
+    private static final String trayIcon = "trayIcon";
+    private static final String style = "style";
+    private static final String gridRows = "gridRows";
+    private static final String gridCollumns = "gridCollumns";
+    private static final String snmpGetRetries = "snmpGetRetries";
+    private static final String snmpGetTimeout = "snmpGetTimeout";
+    private static final String netpings = "netpings";
+    private static final String closedValue = "closedValue";
+    private static final String openedValue = "openedValue";
+
+
     SettingsLoader(String configFileNameIn){
+        defaultParametersMap = new HashMap<>();
         configFileName = configFileNameIn;
+
+        defaultParametersMap.put(ipAddress, "0.0.0.0");
+        defaultParametersMap.put(snmpPort, "161");
+        defaultParametersMap.put(snmpTrapsPort, "162");
+        defaultParametersMap.put(trapOID, "1.3.6.1.4.1.25728.8900.2.2.0");
+        defaultParametersMap.put(getIo1OID, "1.3.6.1.4.1.25728.8900.1.1.2.1");
+        defaultParametersMap.put(community, "SWITCH");
+        defaultParametersMap.put(checkDelay, 5);
+        defaultParametersMap.put(trayIcon, false);
+        defaultParametersMap.put(style, "Metal");
+        defaultParametersMap.put(gridRows, 6);
+        defaultParametersMap.put(gridCollumns, 4);
+        defaultParametersMap.put(snmpGetRetries, 2);
+        defaultParametersMap.put(snmpGetTimeout, 2000);
+        defaultParametersMap.put(closedValue, 1);
+        defaultParametersMap.put(openedValue, 0);
+
         loadConfig();
     }
 
@@ -70,54 +107,16 @@ public class SettingsLoader {
 
         boolean saveFile = false;
 
-        if(!json.has("ipAddress")){
-            json.put("ipAddress", "0.0.0.0");
+        if(!json.has(netpings)){
+            json.put(netpings, new JSONObject());
             saveFile=true;
         }
 
-        if(!json.has("snmpPort")){
-            json.put("snmpPort", "161");
-            saveFile=true;
-        }
-
-        if(!json.has("snmpTrapsPort")){
-            json.put("snmpTrapsPort", "162");
-            saveFile=true;
-        }
-
-        if(!json.has("trapOID")){
-            json.put("trapOID", "1.3.6.1.4.1.25728.8900.2.2.0");
-            saveFile=true;
-        }
-
-        if(!json.has("getIo1OID")){
-            json.put("getIo1OID", "1.3.6.1.4.1.25728.8900.1.1.2.1");
-            saveFile=true;
-        }
-
-        if(!json.has("community")){
-            json.put("community", "SWITCH");
-            saveFile=true;
-        }
-
-        if(!json.has("netpings")){
-            json.put("netpings", new JSONObject());
-            saveFile=true;
-        }
-
-        if(!json.has("checkTime")){
-            json.put("checkTime", 5);
-            saveFile=true;
-        }
-
-        if(!json.has("trayIcon")){
-            json.put("trayIcon", true);
-            saveFile=true;
-        }
-
-        if(!json.has("style")){
-            json.put("style", "Metal");
-            saveFile=true;
+        for(String parameter: defaultParametersMap.keySet()){
+            if(!json.has(parameter)){
+                json.put(parameter, defaultParametersMap.get(parameter));
+                saveFile = true;
+            }
         }
 
         config = json;
@@ -133,68 +132,51 @@ public class SettingsLoader {
 
     public void loadDefaultConfig(){
         JSONObject json = new JSONObject();
-        json.put("ipAddress", "0.0.0.0");
-        json.put("snmpPort", "161");
-        json.put("snmpTrapsPort", "162");
-        json.put("trapOID", "1.3.6.1.4.1.25728.8900.2.2.0");
-        json.put("getIo1OID", "1.3.6.1.4.1.25728.8900.1.1.2.1");
-        json.put("community", "SWITCH");
-        json.put("netpings", new JSONObject());
-        json.put("trayIcon", true);
-        json.put("style", "Metal");
+
+        for(String parameter: defaultParametersMap.keySet()){
+            json.put(parameter, defaultParametersMap.get(parameter));
+        }
 
         config = json;
     }
 
     public SnmpSettings getSnmpSettings(){
         SnmpSettings settings = new SnmpSettings();
-        settings.community = config.getString("community");
-        settings.getIo1OID = config.getString("getIo1OID");
-        settings.ipAddress = config.getString("ipAddress");
-        settings.snmpPort = config.getString("snmpPort");
-        settings.snmpTrapsPort = config.getString("snmpTrapsPort");
-        settings.trapOID = config.getString("trapOID");
+        settings.community = config.getString(community);
+        settings.getIo1OID = config.getString(getIo1OID);
+        settings.ipAddress = config.getString(ipAddress);
+        settings.snmpPort = config.getString(snmpPort);
+        settings.snmpTrapsPort = config.getString(snmpTrapsPort);
+        settings.trapOID = config.getString(trapOID);
         return settings;
     }
 
     public void setSnmpSettings(SnmpSettings snmpSettingsIn){
         if(snmpSettingsIn.community != null){
-            config.put("community", snmpSettingsIn.community);
+            config.put(community, snmpSettingsIn.community);
         }
         if(snmpSettingsIn.getIo1OID != null){
-            config.put("getIo1OID", snmpSettingsIn.getIo1OID);
+            config.put(getIo1OID, snmpSettingsIn.getIo1OID);
         }
         if(snmpSettingsIn.ipAddress != null){
-            config.put("ipAddress", snmpSettingsIn.ipAddress);
+            config.put(ipAddress, snmpSettingsIn.ipAddress);
         }
         if(snmpSettingsIn.snmpPort != null){
-            config.put("snmpPort", snmpSettingsIn.snmpPort);
+            config.put(snmpPort, snmpSettingsIn.snmpPort);
         }
         if(snmpSettingsIn.snmpTrapsPort != null){
-            config.put("snmpTrapsPort", snmpSettingsIn.snmpTrapsPort);
+            config.put(snmpTrapsPort, snmpSettingsIn.snmpTrapsPort);
         }
         if(snmpSettingsIn.trapOID != null){
-            config.put("trapOID", snmpSettingsIn.trapOID);
+            config.put(trapOID, snmpSettingsIn.trapOID);
         }
     }
 
-
-    public Map<String, NetpingWidget> getNetpingWidgetsMap(){
-        Map<String, NetpingWidget> netpings = new HashMap<>();
-
-        JSONObject netpingsJSON = config.getJSONObject("netpings");
-        for(String ip: netpingsJSON.keySet()){
-            String devcieName = netpingsJSON.getString(ip);
-            netpings.put(ip, new NetpingWidget(ip, devcieName));
-        }
-
-        return netpings;
-    }
 
     public Map<String, String> getNetpingIpNameMap(){
         Map<String, String> map = new HashMap<>();
 
-        JSONObject netpingsJSON = config.getJSONObject("netpings");
+        JSONObject netpingsJSON = config.getJSONObject(netpings);
         for(String ip: netpingsJSON.keySet()){
             map.put(ip, netpingsJSON.getString(ip));
         }
@@ -203,44 +185,66 @@ public class SettingsLoader {
     }
 
     public void setNetping(String ipAddressIn, String nameIn){
-        JSONObject netpings = config.getJSONObject("netpings");
-        netpings.put(ipAddressIn, nameIn);
+        JSONObject netpingsJSON = config.getJSONObject(netpings);
+        netpingsJSON.put(ipAddressIn, nameIn);
     }
 
     public void deleteNetping(String ipAddressIn){
-        JSONObject netpings = config.getJSONObject("netpings");
-        netpings.remove(ipAddressIn);
+        JSONObject netpingsJSON = config.getJSONObject(netpings);
+        netpingsJSON.remove(ipAddressIn);
         config.remove(ipAddressIn);
     }
 
     public boolean isNetpingExists(String ipAddressIn){
-        return config.getJSONObject("netpings").has(ipAddressIn);
+        return config.getJSONObject(netpings).has(ipAddressIn);
     }
 
 
-    public int getCheckTime(){
-        return config.getInt("checkTime");
+    public int getCheckDelay(){
+        return config.getInt(checkDelay);
     }
 
     public void setCheckTime(int checkTimeIn){
-        config.put("checkTime", checkTimeIn);
+        config.put(checkDelay, checkTimeIn);
     }
 
 
     public void setTrayIconVisible(boolean visibleIn){
-        config.put("trayIcon", visibleIn);
+        config.put(trayIcon, visibleIn);
     }
 
     public boolean isTrayIcon(){
-        return config.getBoolean("trayIcon");
+        return config.getBoolean(trayIcon);
     }
 
 
     public void setStyle(String styleNameIn){
-        config.put("style", styleNameIn);
+        config.put(style, styleNameIn);
     }
 
     public String getStyle(){
-        return config.getString("style");
+        return config.getString(style);
+    }
+
+
+    public int getGridRows(){
+        return config.getInt(gridRows);
+    }
+    public int getGridCollumns(){
+        return config.getInt(gridCollumns);
+    }
+
+    public int getSnmpGetRetries(){
+        return config.getInt(snmpGetRetries);
+    }
+    public int getSnmpGetTimeout(){
+        return config.getInt(snmpGetTimeout);
+    }
+
+    public int getClosedValue(){
+        return config.getInt(closedValue);
+    }
+    public int getOpenedValue(){
+        return config.getInt(openedValue);
     }
 }
