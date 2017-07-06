@@ -25,7 +25,7 @@ public class MainWindow extends JFrame implements CommandResponder {
     private JButton settingsButton;
     private JTextField checkTime;
 
-    private final String appName = "Netping мониторинг";
+    private final String appName = "NetPing мониторинг";
     private TrayIcon trayIcon;
     private boolean trayIconVisible;
 
