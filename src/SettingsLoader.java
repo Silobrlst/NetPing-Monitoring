@@ -33,7 +33,7 @@ public class SettingsLoader {
     private static final String openedValue = "openedValue";
 
 
-    SettingsLoader(String configFileNameIn){
+    SettingsLoader(String configFileNameIn) {
         defaultParametersMap = new HashMap<>();
         configFileName = configFileNameIn;
 
@@ -56,21 +56,21 @@ public class SettingsLoader {
         loadConfig();
     }
 
-    private String loadDataFromfile(String fileNameIn){
-        try{
+    private String loadDataFromfile(String fileNameIn) {
+        try {
             File file = new File(fileNameIn);
             file.createNewFile();
 
             byte[] encoded = Files.readAllBytes(Paths.get(fileNameIn));
             return new String(encoded, Charset.defaultCharset());
-        }catch(IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
         return null;
     }
 
-    private void saveDataToFile(String fileNameIn, String dataIn){
+    private void saveDataToFile(String fileNameIn, String dataIn) {
         BufferedWriter bw = null;
         FileWriter fw = null;
 
@@ -95,25 +95,25 @@ public class SettingsLoader {
         }
     }
 
-    public void loadConfig(){
+    public void loadConfig() {
         String data = loadDataFromfile(configFileName);
 
         JSONObject json;
-        if(data.isEmpty()){
+        if (data.isEmpty()) {
             json = new JSONObject();
-        }else{
+        } else {
             json = new JSONObject(data);
         }
 
         boolean saveFile = false;
 
-        if(!json.has(netpings)){
+        if (!json.has(netpings)) {
             json.put(netpings, new JSONObject());
-            saveFile=true;
+            saveFile = true;
         }
 
-        for(String parameter: defaultParametersMap.keySet()){
-            if(!json.has(parameter)){
+        for (String parameter : defaultParametersMap.keySet()) {
+            if (!json.has(parameter)) {
                 json.put(parameter, defaultParametersMap.get(parameter));
                 saveFile = true;
             }
@@ -121,26 +121,26 @@ public class SettingsLoader {
 
         config = json;
 
-        if(saveFile){
+        if (saveFile) {
             saveConfig();
         }
     }
 
-    public void saveConfig(){
+    public void saveConfig() {
         saveDataToFile(configFileName, config.toString(5));
     }
 
-    public void loadDefaultConfig(){
+    public void loadDefaultConfig() {
         JSONObject json = new JSONObject();
 
-        for(String parameter: defaultParametersMap.keySet()){
+        for (String parameter : defaultParametersMap.keySet()) {
             json.put(parameter, defaultParametersMap.get(parameter));
         }
 
         config = json;
     }
 
-    public SnmpSettings getSnmpSettings(){
+    public SnmpSettings getSnmpSettings() {
         SnmpSettings settings = new SnmpSettings();
         settings.community = config.getString(community);
         settings.getIo1OID = config.getString(getIo1OID);
@@ -151,100 +151,103 @@ public class SettingsLoader {
         return settings;
     }
 
-    public void setSnmpSettings(SnmpSettings snmpSettingsIn){
-        if(snmpSettingsIn.community != null){
+    public void setSnmpSettings(SnmpSettings snmpSettingsIn) {
+        if (snmpSettingsIn.community != null) {
             config.put(community, snmpSettingsIn.community);
         }
-        if(snmpSettingsIn.getIo1OID != null){
+        if (snmpSettingsIn.getIo1OID != null) {
             config.put(getIo1OID, snmpSettingsIn.getIo1OID);
         }
-        if(snmpSettingsIn.ipAddress != null){
+        if (snmpSettingsIn.ipAddress != null) {
             config.put(ipAddress, snmpSettingsIn.ipAddress);
         }
-        if(snmpSettingsIn.snmpPort != null){
+        if (snmpSettingsIn.snmpPort != null) {
             config.put(snmpPort, snmpSettingsIn.snmpPort);
         }
-        if(snmpSettingsIn.snmpTrapsPort != null){
+        if (snmpSettingsIn.snmpTrapsPort != null) {
             config.put(snmpTrapsPort, snmpSettingsIn.snmpTrapsPort);
         }
-        if(snmpSettingsIn.trapOID != null){
+        if (snmpSettingsIn.trapOID != null) {
             config.put(trapOID, snmpSettingsIn.trapOID);
         }
     }
 
 
-    public Map<String, String> getNetpingIpNameMap(){
+    public Map<String, String> getNetpingIpNameMap() {
         Map<String, String> map = new HashMap<>();
 
         JSONObject netpingsJSON = config.getJSONObject(netpings);
-        for(String ip: netpingsJSON.keySet()){
+        for (String ip : netpingsJSON.keySet()) {
             map.put(ip, netpingsJSON.getString(ip));
         }
 
         return map;
     }
 
-    public void setNetping(String ipAddressIn, String nameIn){
+    public void setNetping(String ipAddressIn, String nameIn) {
         JSONObject netpingsJSON = config.getJSONObject(netpings);
         netpingsJSON.put(ipAddressIn, nameIn);
     }
 
-    public void deleteNetping(String ipAddressIn){
+    public void deleteNetping(String ipAddressIn) {
         JSONObject netpingsJSON = config.getJSONObject(netpings);
         netpingsJSON.remove(ipAddressIn);
         config.remove(ipAddressIn);
     }
 
-    public boolean isNetpingExists(String ipAddressIn){
+    public boolean isNetpingExists(String ipAddressIn) {
         return config.getJSONObject(netpings).has(ipAddressIn);
     }
 
 
-    public int getCheckDelay(){
+    public int getCheckDelay() {
         return config.getInt(checkDelay);
     }
 
-    public void setCheckTime(int checkTimeIn){
+    public void setCheckTime(int checkTimeIn) {
         config.put(checkDelay, checkTimeIn);
     }
 
 
-    public void setTrayIconVisible(boolean visibleIn){
+    public void setTrayIconVisible(boolean visibleIn) {
         config.put(trayIcon, visibleIn);
     }
 
-    public boolean isTrayIcon(){
+    public boolean isTrayIcon() {
         return config.getBoolean(trayIcon);
     }
 
 
-    public void setStyle(String styleNameIn){
+    public void setStyle(String styleNameIn) {
         config.put(style, styleNameIn);
     }
 
-    public String getStyle(){
+    public String getStyle() {
         return config.getString(style);
     }
 
 
-    public int getGridRows(){
+    public int getGridRows() {
         return config.getInt(gridRows);
     }
-    public int getGridCollumns(){
+
+    public int getGridCollumns() {
         return config.getInt(gridCollumns);
     }
 
-    public int getSnmpGetRetries(){
+    public int getSnmpGetRetries() {
         return config.getInt(snmpGetRetries);
     }
-    public int getSnmpGetTimeout(){
+
+    public int getSnmpGetTimeout() {
         return config.getInt(snmpGetTimeout);
     }
 
-    public int getClosedValue(){
+    public int getClosedValue() {
         return config.getInt(closedValue);
     }
-    public int getOpenedValue(){
+
+    public int getOpenedValue() {
         return config.getInt(openedValue);
     }
 }

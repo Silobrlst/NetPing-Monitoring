@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/snmpTrapReceive.iml" filepath="$PROJECT_DIR$/snmpTrapReceive.iml" />
+      <module fileurl="file://$PROJECT_DIR$/NetPing-Monitoring.iml" filepath="$PROJECT_DIR$/NetPing-Monitoring.iml" />
     </modules>
   </component>
 </project>
