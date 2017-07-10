@@ -21,7 +21,7 @@ public class SettingsWindow extends JFrame {
     private JCheckBox trayIcon;
     private JComboBox style;
 
-    private AddChangeNetpingWindow addChangeNetpingWindow;
+    private AddEditNetPingDialog addEditNetPingDialog;
 
     SettingsWindow(SettingsLoader settingsLoaderIn, NetpingsChangeInterface netpingsChangeInterfaceIn){
         this.setTitle("Настройки");
@@ -39,35 +39,36 @@ public class SettingsWindow extends JFrame {
 
 
         SettingsWindow context = this;
-        addChangeNetpingWindow = new AddChangeNetpingWindow(new AddNetpingInterface() {
-            @Override
-            public void add(String ipAddress, String deviceNameIn) {
-                if(!settingsLoaderIn.isNetpingExists(ipAddress)){
-                    Vector<String> row = new Vector<>();
-                    row.add(ipAddress);
-                    row.add(deviceNameIn);
-                    model.addRow(row);
+        addEditNetPingDialog = new AddEditNetPingDialog(this);
 
-                    settingsLoaderIn.setNetping(ipAddress, deviceNameIn);
-
-                    validationStatus.setText("");
-                }else{
-                    System.out.print("11111111111111111111111111");
-                    validationStatus.setText("netping с ip-адресом " + ipAddress + " уже есть");
-                }
-            }
-
-            @Override
-            public void change(String oldIpAddressIn, String newIpAddress, String deviceNameIn) {
-                Vector<String> row = new Vector<>();
-                row.add(newIpAddress);
-                row.add(deviceNameIn);
-                model.addRow(row);
-
-                settingsLoaderIn.deleteNetping(oldIpAddressIn);
-                settingsLoaderIn.setNetping(newIpAddress, deviceNameIn);
-            }
-        });
+//        new AddNetpingInterface() {
+//            @Override
+//            public void add(String ipAddress, String deviceNameIn) {
+//                if(!settingsLoaderIn.isNetpingExists(ipAddress)){
+//                    Vector<String> row = new Vector<>();
+//                    row.add(ipAddress);
+//                    row.add(deviceNameIn);
+//                    model.addRow(row);
+//
+//                    //settingsLoaderIn.setNetping(ipAddress, deviceNameIn);
+//
+//                    validationStatus.setText("");
+//                }else{
+//                    validationStatus.setText("netping с ip-адресом " + ipAddress + " уже есть");
+//                }
+//            }
+//
+//            @Override
+//            public void change(String oldIpAddressIn, String newIpAddress, String deviceNameIn) {
+//                Vector<String> row = new Vector<>();
+//                row.add(newIpAddress);
+//                row.add(deviceNameIn);
+//                model.addRow(row);
+//
+//                settingsLoaderIn.removeNetping(oldIpAddressIn);
+//                //settingsLoaderIn.setNetping(newIpAddress, deviceNameIn);
+//            }
+//        }
 
         applyButton.addActionListener(e -> apply(settingsLoaderIn, netpingsChangeInterfaceIn));
 
@@ -93,15 +94,18 @@ public class SettingsWindow extends JFrame {
         });
 
         addButton.addActionListener(e -> {
-            addChangeNetpingWindow.setAddNetping();
-            addChangeNetpingWindow.setVisible(true);
+            addEditNetPingDialog.setAdding();
+            addEditNetPingDialog.setVisible(true);
+            if(addEditNetPingDialog.getEditing()){
+
+            }
         });
 
         changeButton.addActionListener(e -> {
             if(netpingsTable.getSelectedRowCount() == 1){
                 int row = netpingsTable.getSelectedRows()[0];
-                addChangeNetpingWindow.setChangeNetping(model.getValueAt(row, 0).toString(), model.getValueAt(row, 1).toString());
-                addChangeNetpingWindow.setVisible(true);
+                //addEditNetPingDialog.setChangeNetping(model.getValueAt(row, 0).toString(), model.getValueAt(row, 1).toString());
+                addEditNetPingDialog.setVisible(true);
 
                 validationStatus.setText("");
             }else{
@@ -121,7 +125,7 @@ public class SettingsWindow extends JFrame {
             Collections.sort(rows, Collections.reverseOrder());
 
             for (int row: rows){
-                settingsLoaderIn.deleteNetping(model.getValueAt(row, 0).toString());
+                settingsLoaderIn.removeNetping(model.getValueAt(row, 0).toString());
 
                 model.removeRow(row);
             }
@@ -145,18 +149,18 @@ public class SettingsWindow extends JFrame {
                 }
                 style.setSelectedItem(settingsLoaderIn.getStyle());
 
-                Map<String, String> map = settingsLoaderIn.getNetpingIpNameMap();
-
-                for (int i = model.getRowCount() - 1; i >= 0; i--) {
-                    model.removeRow(i);
-                }
-
-                for(String ip: map.keySet()){
-                    Vector<String> row = new Vector<>();
-                    row.add(ip);
-                    row.add(map.get(ip));
-                    model.addRow(row);
-                }
+//                Map<String, String> map = settingsLoaderIn.getNetpingIpNameMap();
+//
+//                for (int i = model.getRowCount() - 1; i >= 0; i--) {
+//                    model.removeRow(i);
+//                }
+//
+//                for(String ip: map.keySet()){
+//                    Vector<String> row = new Vector<>();
+//                    row.add(ip);
+//                    row.add(map.get(ip));
+//                    model.addRow(row);
+//                }
 
                 SnmpSettings snmpSettings = settingsLoaderIn.getSnmpSettings();
                 community.setText(snmpSettings.community);
@@ -198,8 +202,8 @@ public class SettingsWindow extends JFrame {
                     UIManager.setLookAndFeel(info.getClassName());
                     SwingUtilities.updateComponentTreeUI(this);
                     this.pack();
-                    SwingUtilities.updateComponentTreeUI(addChangeNetpingWindow);
-                    addChangeNetpingWindow.pack();
+                    SwingUtilities.updateComponentTreeUI(addEditNetPingDialog);
+                    addEditNetPingDialog.pack();
                     break;
                 }
             }

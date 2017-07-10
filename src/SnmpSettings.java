@@ -1,3 +1,5 @@
+import org.snmp4j.Snmp;
+
 public class SnmpSettings {
     String snmpPort;
     String snmpTrapsPort;

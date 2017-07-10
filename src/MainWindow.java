@@ -17,27 +17,26 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
 import java.util.*;
+import java.util.List;
 
 public class MainWindow extends JFrame implements CommandResponder {
     private JLabel appStatus;
-    private JPanel netpingGrid;
+    private JPanel netPingGrid;
     private JPanel rootPanel;
     private JButton settingsButton;
-    private JTextField checkTime;
+    private JTextField checkingDelay;
 
-    private final String appName = "NetPing мониторинг";
-    private TrayIcon trayIcon;
     private boolean trayIconVisible;
 
     private SettingsWindow settingsWindow;
 
+    private final String appName = "NetPing мониторинг";
     private Logger logger;
-
     private SettingsLoader settingsLoader;
-    private OID oid;
-
     private Snmp snmp;
-    private Map<String, NetpingWidget> ipMap;
+    private TrayIcon trayIcon;
+
+    private Map<String, NetPingWidget> ipMap;
 
 
     private void initTrayIcon() {
@@ -73,10 +72,9 @@ public class MainWindow extends JFrame implements CommandResponder {
         settingsLoader = new SettingsLoader("config.json");
         SnmpSettings snmpSettings = settingsLoader.getSnmpSettings();
         String address = snmpSettings.ipAddress + "/" + snmpSettings.snmpTrapsPort;
-        oid = new OID(snmpSettings.trapOID);
 
         GridLayout gridLayout = new GridLayout(settingsLoader.getGridRows(), settingsLoader.getGridCollumns());
-        netpingGrid.setLayout(gridLayout);
+        netPingGrid.setLayout(gridLayout);
 
         try {
             for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
@@ -94,7 +92,7 @@ public class MainWindow extends JFrame implements CommandResponder {
         trayIconVisible = false;
         setTrayIconVisible(settingsLoader.isTrayIcon());
 
-        checkTime.setText(Integer.toString(settingsLoader.getCheckDelay()));
+        checkingDelay.setText(Integer.toString(settingsLoader.getCheckingDelay()));
 
         settingsWindow = new SettingsWindow(settingsLoader, () -> {
             try {
@@ -112,19 +110,23 @@ public class MainWindow extends JFrame implements CommandResponder {
 
             setTrayIconVisible(settingsLoader.isTrayIcon());
 
-            Map<String, String> map = settingsLoader.getNetpingIpNameMap();
+            List<String> ipAddresses = settingsLoader.getNetPingIpAddresses();
 
             //удаляем лишние
-            for (String ip : ipMap.keySet()) {
-                if (!map.containsKey(ip)) {
+            for (String ip: ipMap.keySet()) {
+                if (!ipAddresses.contains(ip)) {
                     deleteNetping(ip);
                 }
             }
 
             //добавляем новые или изменяем существующие
-            for (String ip : map.keySet()) {
-                setNetping(ip, map.get(ip));
+            for (String ip : ipAddresses) {
+                netPingGrid.add(settingsLoader.loadNetPing(this, ip));
+                netPingGrid.revalidate();
+                netPingGrid.repaint();
             }
+
+            this.pack();
         });
 
         settingsButton.addActionListener(e -> settingsWindow.setVisible(true));
@@ -147,14 +149,14 @@ public class MainWindow extends JFrame implements CommandResponder {
 
         initTrayIcon();
 
-        checkTime.addActionListener(e -> {
-            if (checkTime.getText().matches("^[1-9]\\d*")) {
-                int delay = Integer.parseInt(checkTime.getText());
+        checkingDelay.addActionListener(e -> {
+            if (checkingDelay.getText().matches("^[1-9]\\d*")) {
+                int delay = Integer.parseInt(checkingDelay.getText());
 
                 settingsLoader.setCheckTime(delay);
                 settingsLoader.saveConfig();
             } else {
-                checkTime.setText(Integer.toString(settingsLoader.getCheckDelay()));
+                checkingDelay.setText(Integer.toString(settingsLoader.getCheckingDelay()));
             }
         });
 
@@ -199,16 +201,17 @@ public class MainWindow extends JFrame implements CommandResponder {
         snmp = new Snmp(mtDispatcher, transportGet);
         snmp.addCommandResponder(this);
 
-        Map<String, String> ipNameMap = settingsLoader.getNetpingIpNameMap();
-        for (String ip : ipNameMap.keySet()) {
-            NetpingWidget netpingWidget = new NetpingWidget(ip, ipNameMap.get(ip), this);
-
-            ipMap.put(ip, netpingWidget);
-            netpingGrid.add(netpingWidget);
-            netpingGrid.revalidate();
-            netpingGrid.repaint();
-            this.pack();
+        //<init netping widgets>==========================
+        List<String> ipAddresses = settingsLoader.getNetPingIpAddresses();
+        for (String ip : ipAddresses) {
+            NetPingWidget netPingWidget = settingsLoader.loadNetPing(this, ip);
+            ipMap.put(ip, netPingWidget);
+            netPingGrid.add(netPingWidget);
+            netPingGrid.revalidate();
+            netPingGrid.repaint();
         }
+        this.pack();
+        //</init netping widgets>=========================
 
         transport.listen();
         String message = "прием SNMP-ловушек: " + address;
@@ -223,23 +226,29 @@ public class MainWindow extends JFrame implements CommandResponder {
         }
     }
 
+    public void lineReceiveTrap(IOLineWidget ioLineWidgetIn, PDU pduIn){
+        if (pduIn.getVariable(ioLineWidgetIn.getTrapReceiveOID()) != null) {
+            int opened = pduIn.getVariable(ioLineWidgetIn.getTrapReceiveOID()).toInt();
+
+            if (opened == 0) {
+                ioLineWidgetIn.set0();
+            } else {
+                ioLineWidgetIn.set1();
+            }
+        }
+    }
+
     public synchronized void processPdu(CommandResponderEvent cmdRespEvent) {
         PDU pdu = cmdRespEvent.getPDU();
         if (pdu != null) {
+            String ipPort = cmdRespEvent.getPeerAddress().toString();
+            String ip = ipPort.split("/")[0];
+            NetPingWidget netPingWidget = ipMap.get(ip);
 
-            if (pdu.getVariable(oid) != null) {
-                int opened = pdu.getVariable(oid).toInt();
-
-                String ipPort = cmdRespEvent.getPeerAddress().toString();
-                String ip = ipPort.split("/")[0];
-                NetpingWidget netpingWidget = ipMap.get(ip);
-
-                if (opened == 0) {
-                    netpingWidget.setState(NetpingStateEnum.Opened);
-                } else {
-                    netpingWidget.setState(NetpingStateEnum.Closed);
-                }
-            }
+            lineReceiveTrap(netPingWidget.getLine("1"), pdu);
+            lineReceiveTrap(netPingWidget.getLine("2"), pdu);
+            lineReceiveTrap(netPingWidget.getLine("3"), pdu);
+            lineReceiveTrap(netPingWidget.getLine("4"), pdu);
 
             int pduType = pdu.getType();
             if ((pduType != PDU.TRAP) && (pduType != PDU.V1TRAP) && (pduType != PDU.REPORT)
@@ -286,30 +295,11 @@ public class MainWindow extends JFrame implements CommandResponder {
     }
 
 
-    private void setNetping(String ipAddressIn, String nameIn) {
-        if (ipMap.containsKey(ipAddressIn)) {
-            if (ipMap.get(ipAddressIn).getDeviceName().compareTo(nameIn) != 0) {
-                String oldName = ipMap.get(ipAddressIn).getDeviceName();
-                ipMap.get(ipAddressIn).setDeviceName(nameIn);
-                logger.info("изменено имя netping " + ipAddressIn + " с " + oldName + " на " + nameIn);
-            }
-        } else {
-            NetpingWidget netping = new NetpingWidget(ipAddressIn, nameIn, this);
-            netpingGrid.add(netping);
-            netpingGrid.revalidate();
-            netpingGrid.repaint();
-            this.pack();
-            ipMap.put(ipAddressIn, netping);
-
-            logger.info("добавлен netping " + ipAddressIn + " " + nameIn);
-        }
-    }
-
     private void deleteNetping(String ipAddressIn) {
         String name = ipMap.get(ipAddressIn).getDeviceName();
-        netpingGrid.remove(ipMap.get(ipAddressIn));
-        netpingGrid.revalidate();
-        netpingGrid.repaint();
+        netPingGrid.remove(ipMap.get(ipAddressIn));
+        netPingGrid.revalidate();
+        netPingGrid.repaint();
         this.pack();
 
         logger.info("удалён netping " + ipAddressIn + " " + name);
@@ -334,5 +324,9 @@ public class MainWindow extends JFrame implements CommandResponder {
 
     public TrayIcon getTrayIcon(){
         return trayIcon;
+    }
+
+    public int getDelay(){
+        return Integer.parseInt(checkingDelay.getText());
     }
 }

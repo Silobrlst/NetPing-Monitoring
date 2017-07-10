@@ -1,4 +1,5 @@
 import org.json.JSONObject;
+import org.snmp4j.smi.OID;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -7,20 +8,22 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class SettingsLoader {
     private String configFileName;
     private JSONObject config;
+    private JSONObject netPingsJSON;
 
     private Map<String, Object> defaultParametersMap;
     private static final String ipAddress = "ipAddress";
     private static final String snmpPort = "snmpPort";
     private static final String snmpTrapsPort = "snmpTrapsPort";
-    private static final String trapOID = "trapOID";
     private static final String getIo1OID = "getIo1OID";
-    private static final String community = "community";
+    private static final String snmpCommunity = "snmpCommunity";
     private static final String checkDelay = "checkDelay";
     private static final String trayIcon = "trayIcon";
     private static final String style = "style";
@@ -31,6 +34,12 @@ public class SettingsLoader {
     private static final String netpings = "netpings";
     private static final String closedValue = "closedValue";
     private static final String openedValue = "openedValue";
+    private static final String name = "name";
+    private static final String getOID = "getOID";
+    private static final String trapOID = "trapOID";
+    private static final String messageText = "messageText";
+    private static final String textColor = "textColor";
+    private static final String backgroundColor = "backgroundColor";
 
 
     SettingsLoader(String configFileNameIn) {
@@ -42,7 +51,7 @@ public class SettingsLoader {
         defaultParametersMap.put(snmpTrapsPort, "162");
         defaultParametersMap.put(trapOID, "1.3.6.1.4.1.25728.8900.2.2.0");
         defaultParametersMap.put(getIo1OID, "1.3.6.1.4.1.25728.8900.1.1.2.1");
-        defaultParametersMap.put(community, "SWITCH");
+        defaultParametersMap.put(snmpCommunity, "SWITCH");
         defaultParametersMap.put(checkDelay, 5);
         defaultParametersMap.put(trayIcon, false);
         defaultParametersMap.put(style, "Metal");
@@ -120,6 +129,7 @@ public class SettingsLoader {
         }
 
         config = json;
+        netPingsJSON = config.getJSONObject(netpings);
 
         if (saveFile) {
             saveConfig();
@@ -142,7 +152,7 @@ public class SettingsLoader {
 
     public SnmpSettings getSnmpSettings() {
         SnmpSettings settings = new SnmpSettings();
-        settings.community = config.getString(community);
+        settings.community = config.getString(snmpCommunity);
         settings.getIo1OID = config.getString(getIo1OID);
         settings.ipAddress = config.getString(ipAddress);
         settings.snmpPort = config.getString(snmpPort);
@@ -153,7 +163,7 @@ public class SettingsLoader {
 
     public void setSnmpSettings(SnmpSettings snmpSettingsIn) {
         if (snmpSettingsIn.community != null) {
-            config.put(community, snmpSettingsIn.community);
+            config.put(snmpCommunity, snmpSettingsIn.community);
         }
         if (snmpSettingsIn.getIo1OID != null) {
             config.put(getIo1OID, snmpSettingsIn.getIo1OID);
@@ -173,26 +183,76 @@ public class SettingsLoader {
     }
 
 
-    public Map<String, String> getNetpingIpNameMap() {
-        Map<String, String> map = new HashMap<>();
+    public List<String> getNetPingIpAddresses(){
+        ArrayList<String> ipAddresses = new ArrayList<>();
 
-        JSONObject netpingsJSON = config.getJSONObject(netpings);
-        for (String ip : netpingsJSON.keySet()) {
-            map.put(ip, netpingsJSON.getString(ip));
+        for (String ip : netPingsJSON.keySet()) {
+            ipAddresses.add(ip);
         }
 
-        return map;
+        return ipAddresses;
     }
 
-    public void setNetping(String ipAddressIn, String nameIn) {
-        JSONObject netpingsJSON = config.getJSONObject(netpings);
-        netpingsJSON.put(ipAddressIn, nameIn);
-    }
 
-    public void deleteNetping(String ipAddressIn) {
+    public void removeNetping(String ipAddressIn) {
         JSONObject netpingsJSON = config.getJSONObject(netpings);
         netpingsJSON.remove(ipAddressIn);
         config.remove(ipAddressIn);
+    }
+
+
+    public void loadIOLine(NetPingWidget netPingWidgetIn, String lineNumberIn){
+        JSONObject netPingJSON;
+
+        if(netPingsJSON.has(netPingWidgetIn.getIpAddress())){
+            netPingJSON = netPingsJSON.getJSONObject(netPingWidgetIn.getIpAddress());
+
+            JSONObject lineJSON = netPingJSON.getJSONObject(lineNumberIn);
+            IOLineWidget ioLineWidget = netPingWidgetIn.getLine(lineNumberIn);
+            ioLineWidget.setName(lineJSON.getString(name));
+            ioLineWidget.setSnmpGetOID(lineJSON.getString(getOID));
+            ioLineWidget.setTrapReceiveOID(lineJSON.getString(trapOID));
+        }
+    }
+
+    public NetPingWidget loadNetPing(MainWindow mainWindowIn, String ipAddressIn){
+        JSONObject netPingJSON;
+
+        if(netPingsJSON.has(ipAddressIn)){
+            netPingJSON = netPingsJSON.getJSONObject(ipAddressIn);
+
+            NetPingWidget netPingWidget = new NetPingWidget(mainWindowIn, ipAddressIn);
+            netPingWidget.setDeviceName(netPingJSON.getString(name));
+            netPingWidget.setSnmpCommunity(netPingJSON.getString(snmpCommunity));
+            netPingWidget.setSnmpPort(netPingJSON.getString(snmpPort));
+
+            loadIOLine(netPingWidget, "1");
+            loadIOLine(netPingWidget, "2");
+            loadIOLine(netPingWidget, "3");
+            loadIOLine(netPingWidget, "4");
+        }
+
+        return null;
+    }
+
+    public NetPingWidget newNetPing(MainWindow mainWindowIn, String ipAddressIn){
+        NetPingWidget netPingWidget = new NetPingWidget(mainWindowIn, ipAddressIn);
+
+        //<init lines>=======================
+        setNetPingIOLine(netPingWidget, "1");
+        setNetPingIOLine(netPingWidget, "2");
+        setNetPingIOLine(netPingWidget, "3");
+        setNetPingIOLine(netPingWidget, "4");
+        //</init lines>======================
+
+        setNetPing(ipAddressIn, netPingWidget);
+
+        return netPingWidget;
+    }
+
+
+    public boolean isTrayIcon() {
+        return config.getBoolean(trayIcon);
     }
 
     public boolean isNetpingExists(String ipAddressIn) {
@@ -200,54 +260,80 @@ public class SettingsLoader {
     }
 
 
-    public int getCheckDelay() {
-        return config.getInt(checkDelay);
+    //<netPing settings set>===============
+    public void setNetPingIpAddress(String oldIpAddressIn, String newIpAddressIn) {
+        if(netPingsJSON.has(oldIpAddressIn)){
+            JSONObject netpingJSON = netPingsJSON.getJSONObject(oldIpAddressIn);
+            netPingsJSON.remove(oldIpAddressIn);
+            netPingsJSON.put(newIpAddressIn, netpingJSON);
+        }
     }
+    public void setNetPing(String ipAddressIn, NetPingWidget netPingWidgetIn) {
+        JSONObject netpingJSON;
 
+        if(netPingsJSON.has(ipAddressIn)){
+            netpingJSON = netPingsJSON.getJSONObject(ipAddressIn);
+        }else{
+            netpingJSON = new JSONObject();
+            netPingsJSON.put(ipAddressIn, netpingJSON);
+        }
+
+        netpingJSON.put(name, netPingWidgetIn.getDeviceName());
+        netpingJSON.put(snmpCommunity, netPingWidgetIn.getDeviceName());
+        netpingJSON.put(snmpPort, netPingWidgetIn.getDeviceName());
+    }
+    public void setNetPingIOLine(NetPingWidget netPingWidgetIn, String lineNumberIn){
+        JSONObject netPingJSON = netPingsJSON.getJSONObject(netPingWidgetIn.getIpAddress());
+        JSONObject lineJSON = netPingJSON.getJSONObject(lineNumberIn);
+
+        IOLineWidget ioLineWidget = netPingWidgetIn.getLine(lineNumberIn);
+        lineJSON.put(name, ioLineWidget.getLineName());
+        lineJSON.put(getOID, ioLineWidget.getSnmpGetOID());
+        lineJSON.put(trapOID, ioLineWidget.getTrapReceiveOID());
+
+        setNetPingIOLineDisplayMessageSettings(netPingWidgetIn.getIpAddress(), lineNumberIn, ioLineWidget.getValue0Message());
+        setNetPingIOLineDisplayMessageSettings(netPingWidgetIn.getIpAddress(), lineNumberIn, ioLineWidget.getValue1Message());
+    }
+    public void setNetPingIOLineDisplayMessageSettings(String ipAddressIn, String lineNumberIn, DisplayMessageSettings displayMessageSettingsIn){
+        JSONObject netpingJSON = netPingsJSON.getJSONObject(ipAddressIn);
+        JSONObject lineJSON = netpingJSON.getJSONObject(lineNumberIn);
+        lineJSON.put(messageText, displayMessageSettingsIn.messageText);
+        lineJSON.put(textColor, displayMessageSettingsIn.textColor.getRGB());
+        lineJSON.put(backgroundColor, displayMessageSettingsIn.backgroundColor.getRGB());
+    }
+    //</netPing settings set>==============
+
+    //<application settings set>===========
     public void setCheckTime(int checkTimeIn) {
         config.put(checkDelay, checkTimeIn);
     }
-
-
     public void setTrayIconVisible(boolean visibleIn) {
         config.put(trayIcon, visibleIn);
     }
-
-    public boolean isTrayIcon() {
-        return config.getBoolean(trayIcon);
-    }
-
-
     public void setStyle(String styleNameIn) {
         config.put(style, styleNameIn);
     }
+    //</application settings set>==========
 
+    //<application settings get>===========
+    public int getCheckingDelay() {
+        return config.getInt(checkDelay);
+    }
     public String getStyle() {
         return config.getString(style);
     }
-
-
     public int getGridRows() {
         return config.getInt(gridRows);
     }
-
     public int getGridCollumns() {
         return config.getInt(gridCollumns);
     }
-
     public int getSnmpGetRetries() {
         return config.getInt(snmpGetRetries);
     }
-
     public int getSnmpGetTimeout() {
         return config.getInt(snmpGetTimeout);
     }
-
-    public int getClosedValue() {
-        return config.getInt(closedValue);
-    }
-
-    public int getOpenedValue() {
-        return config.getInt(openedValue);
-    }
+    //</application settings get>==========
 }
+

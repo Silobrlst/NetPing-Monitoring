@@ -2,8 +2,10 @@ import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
 import org.snmp4j.event.ResponseEvent;
 import org.snmp4j.mp.SnmpConstants;
+import org.snmp4j.smi.OID;
 import org.snmp4j.smi.OctetString;
 import org.snmp4j.smi.UdpAddress;
+import org.snmp4j.smi.VariableBinding;
 
 import javax.swing.*;
 import java.awt.*;
@@ -14,37 +16,52 @@ public class IOLineWidget extends JPanel {
     private JLabel messageText;
     private JPanel rootPanel;
 
-    NetPingSettings netPingSettings;
-    private IOLineSettings ioLineSettings;
+    //<line settings>=================
+    private OID trapReceiveOID;
+    private OID snmpGetOID;
+    private VariableBinding snmpGetVariable;
+    private DisplayMessageSettings value1Message;
+    private DisplayMessageSettings value0Message;
+    //</line settings>================
 
     private Color defaultBackgroundColor;
-
     private AutoChecking autoChecking;
+    private NetPingWidget netPingWidget;
 
-    IOLineWidget(String lineNameIn, NetPingSettings netPingSettingsIn, IOLineSettings ioLineSettingsIn){
-        lineName.setText(lineNameIn);
-        netPingSettings = netPingSettingsIn;
-        ioLineSettings = ioLineSettingsIn;
+    IOLineWidget(NetPingWidget netPingWidgetIn){
+        netPingWidget = netPingWidgetIn;
+        snmpGetOID = null;
+        trapReceiveOID = null;
+        snmpGetVariable = new VariableBinding(snmpGetOID);
+        value1Message = new DisplayMessageSettings();
+        value0Message = new DisplayMessageSettings();
 
-        AutoChecking autoChecking = new AutoChecking(() -> {
-            SnmpSettings snmpSettings = settingsLoader.getSnmpSettings();
+        defaultBackgroundColor = this.getBackground();
+
+        lineName.setText("имя линии");
+        messageText.setText("неизвестно");
+
+        autoChecking = new AutoChecking(() -> {
+            if(trapReceiveOID == null || snmpGetOID == null){
+                return;
+            }
 
             PDU pdu = new PDU();
-            pdu.add(ioLineSettings.snmpGetVariable);
+            pdu.add(snmpGetVariable);
             pdu.setType(PDU.GET);
 
             // Create Target Address object
             CommunityTarget comtarget = new CommunityTarget();
-            comtarget.setCommunity(new OctetString(netPingSettings.snmpCommunity));
+            comtarget.setCommunity(new OctetString(netPingWidget.getSnmpCommunity()));
             comtarget.setVersion(SnmpConstants.version1);
-            comtarget.setAddress(new UdpAddress(ipAddress.getText() + "/" + snmpSettings.snmpPort));
-            comtarget.setRetries(settingsLoader.getSnmpGetRetries());
-            comtarget.setTimeout(settingsLoader.getSnmpGetTimeout());
+            comtarget.setAddress(new UdpAddress(netPingWidget.getIpAddress() + "/" + netPingWidget.getDeviceName()));
+            comtarget.setRetries(netPingWidget.getMainWindow().getSettingsLoader().getSnmpGetRetries());
+            comtarget.setTimeout(netPingWidget.getMainWindow().getSettingsLoader().getSnmpGetTimeout());
 
             //checking.setText("проверка...");
 
             try {
-                ResponseEvent response = snmp.get(pdu, comtarget);
+                ResponseEvent response = netPingWidget.getMainWindow().getSnmp().get(pdu, comtarget);
 
                 // Process Agent Response
                 if (response != null) {
@@ -56,13 +73,13 @@ public class IOLineWidget extends JPanel {
                         String errorStatusText = responsePDU.getErrorStatusText();
 
                         if (errorStatus == PDU.noError) {
-                            if (responsePDU.getVariable(io1OID) != null) {
-                                int opened = responsePDU.getVariable(io1OID).toInt();
+                            if (responsePDU.getVariable(snmpGetOID) != null) {
+                                int value = responsePDU.getVariable(snmpGetOID).toInt();
 
-                                if (opened == openedValue) {
-                                    setState(NetpingStateEnum.Closed);
-                                } else if(opened == closedValue){
-                                    setState(NetpingStateEnum.Opened);
+                                if (value == 1) {
+                                    set1();
+                                } else if(value == 0){
+                                    set0();
                                 }
                             }
                         } else {
@@ -85,27 +102,54 @@ public class IOLineWidget extends JPanel {
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
-        }, settingsLoader.getCheckDelay());
+        }, netPingWidget.getMainWindow().getSettingsLoader().getCheckingDelay());
     }
 
-    void set1(){
-        rootPanel.setBackground(ioLineSettings.value1Message.backgroundColor);
-        messageText.setText(ioLineSettings.value1Message.messageText);
-        messageText.setForeground(ioLineSettings.value1Message.textColor);
-        lineName.setForeground(ioLineSettings.value1Message.textColor);
+    public void setLineName(String lineNameIn){
+        lineName.setText(lineNameIn);
     }
-
-    void set0(){
-        rootPanel.setBackground(ioLineSettings.value0Message.backgroundColor);
-        messageText.setText(ioLineSettings.value0Message.messageText);
-        messageText.setForeground(ioLineSettings.value0Message.textColor);
-        lineName.setForeground(ioLineSettings.value0Message.textColor);
+    public void setSnmpGetOID(String snmpGetOIDIn){
+        snmpGetOID = new OID(snmpGetOIDIn);
     }
-
-    void setError(){
+    public void setTrapReceiveOID(String trapReceiveOIDIn){
+        trapReceiveOID = new OID(trapReceiveOIDIn);
+        snmpGetVariable = new VariableBinding(trapReceiveOID);
+    }
+    public void set1(){
+        rootPanel.setBackground(value1Message.backgroundColor);
+        messageText.setText(value1Message.messageText);
+        messageText.setForeground(value1Message.textColor);
+        lineName.setForeground(value1Message.textColor);
+    }
+    public void set0(){
+        rootPanel.setBackground(value0Message.backgroundColor);
+        messageText.setText(value0Message.messageText);
+        messageText.setForeground(value0Message.textColor);
+        lineName.setForeground(value0Message.textColor);
+    }
+    public void setError(){
         rootPanel.setBackground(defaultBackgroundColor);
         messageText.setText("Ошибка");
         messageText.setForeground(Color.BLACK);
         lineName.setForeground(Color.BLACK);
+    }
+
+    public String getLineName(){
+        return lineName.getText();
+    }
+    public DisplayMessageSettings getValue0Message(){
+        return value0Message;
+    }
+    public DisplayMessageSettings getValue1Message(){
+        return value1Message;
+    }
+    public OID getTrapReceiveOID(){
+        return trapReceiveOID;
+    }
+    public OID getSnmpGetOID(){
+        return snmpGetOID;
+    }
+    public AutoChecking getAutoChecking(){
+        return autoChecking;
     }
 }
