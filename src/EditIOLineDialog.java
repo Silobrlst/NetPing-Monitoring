@@ -5,31 +5,36 @@ public class EditIOLineDialog extends JDialog {
     private JPanel contentPane;
     private JButton buttonOK;
     private JButton buttonCancel;
-    private JTextField textField1;
-    private JButton выбратьЦветButton;
-    private JButton button1;
-    private JTextField textField2;
-    private JTextField textField3;
-    private JTextField textField4;
+    private JTextField value0Message;
+    private JPanel value0TextColor;
+    private JPanel value0BackgroundColor;
+    private JButton value0ChooseTextColorButton;
+    private JButton value0ChooseBackgroundColorButton;
+    private JTextField value1Message;
+    private JButton value1ChooseTextColorButton;
+    private JButton value1ChooseBackgroundColorButton;
+    private JTextField lineName;
+    private JTextField getOID;
+    private JTextField trapOID;
+    private JPanel value1TextColor;
+    private JPanel value1BackgroundColor;
 
-    public EditIOLineDialog(JFrame ownerIn) {
-        super(ownerIn, ModalityType.APPLICATION_MODAL);
+    private AddEditNetPingDialog addEditNetPingDialog;
+
+    private String currentlineNumber;
+    private IOLineWidget currentIOLineWidget;
+
+    public EditIOLineDialog(AddEditNetPingDialog addEditNetPingDialogIn) {
+        super(addEditNetPingDialogIn, ModalityType.APPLICATION_MODAL);
+        addEditNetPingDialog = addEditNetPingDialogIn;
 
         setContentPane(contentPane);
         setModal(true);
         getRootPane().setDefaultButton(buttonOK);
 
-        buttonOK.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                onOK();
-            }
-        });
+        buttonOK.addActionListener(e -> onOK());
 
-        buttonCancel.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                onCancel();
-            }
-        });
+        buttonCancel.addActionListener(e -> onCancel());
 
         // call onCancel() when cross is clicked
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -40,20 +45,39 @@ public class EditIOLineDialog extends JDialog {
         });
 
         // call onCancel() on ESCAPE
-        contentPane.registerKeyboardAction(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                onCancel();
-            }
-        }, KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+        contentPane.registerKeyboardAction(e -> onCancel(), KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+
+        value0ChooseTextColorButton.addActionListener(e -> value0TextColor.setBackground(JColorChooser.showDialog(this, "Выбор цвета текста 0", value0TextColor.getBackground())));
+        value0ChooseBackgroundColorButton.addActionListener(e -> value0BackgroundColor.setBackground(JColorChooser.showDialog(this, "Выбор цвета фона 0", value0BackgroundColor.getBackground())));
+        value1ChooseTextColorButton.addActionListener(e -> value1TextColor.setBackground(JColorChooser.showDialog(this, "Выбор цвета текста 1", value1TextColor.getBackground())));
+        value1ChooseBackgroundColorButton.addActionListener(e -> value1BackgroundColor.setBackground(JColorChooser.showDialog(this, "Выбор цвета фона 1", value1BackgroundColor.getBackground())));
+
+        this.pack();
     }
 
     private void onOK() {
-        // add your code here
+        addEditNetPingDialog.setLineName(currentlineNumber, lineName.getText());
         dispose();
     }
 
     private void onCancel() {
         // add your code here if necessary
         dispose();
+    }
+
+
+    public void setIOLineEditing(IOLineWidget ioLineWidgetIn, String lineNumberIn){
+        currentlineNumber = lineNumberIn;
+        currentIOLineWidget = ioLineWidgetIn;
+        this.setTitle("Изменение линии " + currentlineNumber);
+    }
+
+    void updateStyle(){
+        SwingUtilities.updateComponentTreeUI(this);
+        this.pack();
+    }
+
+    public MainWindow getMainWindow(){
+        return addEditNetPingDialog.getMainWindow();
     }
 }

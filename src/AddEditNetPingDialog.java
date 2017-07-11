@@ -5,20 +5,34 @@ public class AddEditNetPingDialog extends JDialog {
     private JPanel contentPane;
     private JButton buttonOK;
     private JButton buttonCancel;
-    private JTextField textField4;
-    private JTextField textField3;
-    private JTextField textField2;
-    private JTextField textField1;
-    private JButton настроитьButton;
-    private JCheckBox линия1CheckBox;
-    private JCheckBox линия2CheckBox;
-    private JCheckBox линия3CheckBox;
-    private JCheckBox линия4CheckBox;
+    private JTextField snmpPort;
+    private JTextField community;
+    private JTextField deviceName;
+    private JTextField ipAddress;
+    private JCheckBox line1CheckBox;
+    private JCheckBox line2CheckBox;
+    private JCheckBox line3CheckBox;
+    private JCheckBox line4CheckBox;
+    private JButton line1SettingsButton;
+    private JButton line2SettingsButton;
+    private JButton line3SettingsButton;
+    private JButton line4SettingsButton;
+    private JLabel line1Name;
+    private JLabel line2Name;
+    private JLabel line3Name;
+    private JLabel line4Name;
 
     private boolean editing; //режим редактирования - true, режим добавления - false
+    NetPingWidget currentNetPingWidget;
 
-    public AddEditNetPingDialog(JFrame ownerIn) {
-        super(ownerIn, ModalityType.APPLICATION_MODAL);
+    private EditIOLineDialog editIOLineDialog;
+
+    private SettingsWindow settingsWindow;
+
+    public AddEditNetPingDialog(SettingsWindow settingsWindowIn) {
+        super(settingsWindowIn, ModalityType.APPLICATION_MODAL);
+
+        settingsWindow = settingsWindowIn;
 
         setContentPane(contentPane);
         setModal(true);
@@ -39,7 +53,26 @@ public class AddEditNetPingDialog extends JDialog {
         // call onCancel() on ESCAPE
         contentPane.registerKeyboardAction(e -> onCancel(), KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
 
-        setAdding();
+        editIOLineDialog = new EditIOLineDialog(this);
+
+        line1SettingsButton.addActionListener(e -> {
+            editIOLineDialog.setIOLineEditing(currentNetPingWidget.getLine("1"), "1");
+            editIOLineDialog.setVisible(true);
+        });
+        line2SettingsButton.addActionListener(e -> {
+            editIOLineDialog.setIOLineEditing(currentNetPingWidget.getLine("2"), "2");
+            editIOLineDialog.setVisible(true);
+        });
+        line3SettingsButton.addActionListener(e -> {
+            editIOLineDialog.setIOLineEditing(currentNetPingWidget.getLine("3"), "3");
+            editIOLineDialog.setVisible(true);
+        });
+        line4SettingsButton.addActionListener(e -> {
+            editIOLineDialog.setIOLineEditing(currentNetPingWidget.getLine("4"), "4");
+            editIOLineDialog.setVisible(true);
+        });
+
+        this.pack();
     }
 
     private void onOK() {
@@ -52,16 +85,60 @@ public class AddEditNetPingDialog extends JDialog {
         dispose();
     }
 
-    public void setAdding(){
+    public void setAdding(NetPingWidget netPingWidgetIn){
         editing = false;
+        currentNetPingWidget = netPingWidgetIn;
         this.setTitle("Добавление NetPing");
     }
     public void setEditing(NetPingWidget netPingWidgetIn){
         editing = true;
+        currentNetPingWidget = netPingWidgetIn;
         this.setTitle("Изменение NetPing");
+    }
+
+    void updateStyle(){
+        SwingUtilities.updateComponentTreeUI(this);
+        editIOLineDialog.updateStyle();
+        this.pack();
     }
 
     public boolean getEditing(){
         return editing;
+    }
+
+    void setLineName(String lineNumberIn, String nameIn){
+        switch (lineNumberIn){
+            case "1":
+                line1Name.setText(nameIn);
+                break;
+            case "2":
+                line2Name.setText(nameIn);
+                break;
+            case "3":
+                line3Name.setText(nameIn);
+                break;
+            case "4":
+                line4Name.setText(nameIn);
+                break;
+        }
+    }
+
+    JLabel getLineNameLabel(String lineNumberIn){
+        switch(lineNumberIn){
+            case "1":
+                return line1Name;
+            case "2":
+                return line2Name;
+            case "3":
+                return line3Name;
+            case "4":
+                return line4Name;
+            default:
+                return null;
+        }
+    }
+
+    public MainWindow getMainWindow(){
+        return settingsWindow.getMainWindow();
     }
 }

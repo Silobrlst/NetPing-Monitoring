@@ -1,9 +1,7 @@
 {
-     "netpings": {
-          "192.168.1.206": "ГК пом.104",
-          "192.168.1.217": "Маслоаппаратная пом. 001"
-     },
+     "netpings": {},
      "getIo1OID": "1.3.6.1.4.1.25728.8900.1.1.2.1",
+     "snmpCommunity": "SWITCH",
      "closedValue": 1,
      "snmpGetTimeout": 2000,
      "openedValue": 0,

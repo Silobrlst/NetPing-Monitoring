@@ -1,5 +1,7 @@
 import javax.swing.*;
+import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumnModel;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.util.*;
@@ -19,23 +21,32 @@ public class SettingsWindow extends JFrame {
     private JTable netpingsTable;
     private JLabel validationStatus;
     private JCheckBox trayIcon;
-    private JComboBox style;
+    private JComboBox<String> style;
 
     private AddEditNetPingDialog addEditNetPingDialog;
 
-    SettingsWindow(SettingsLoader settingsLoaderIn, NetpingsChangeInterface netpingsChangeInterfaceIn){
+    private MainWindow mainWindow;
+
+    SettingsWindow(MainWindow mainWindowIn, SettingsLoader settingsLoaderIn, NetpingsChangeInterface netpingsChangeInterfaceIn){
         this.setTitle("Настройки");
+
+        mainWindow = mainWindowIn;
 
         Vector<String> head = new Vector<>();
         head.add("ip-адрес");
         head.add("имя");
-        DefaultTableModel model = new DefaultTableModel(head, 0){
+        head.add("виджет");
+
+        NetPingTableModel model = new NetPingTableModel(head){
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
             }
         };
         netpingsTable.setModel(model);
+
+        TableColumnModel tcm = netpingsTable.getColumnModel();
+        tcm.removeColumn(tcm.getColumn(2));
 
 
         SettingsWindow context = this;
@@ -94,17 +105,14 @@ public class SettingsWindow extends JFrame {
         });
 
         addButton.addActionListener(e -> {
-            addEditNetPingDialog.setAdding();
+            addEditNetPingDialog.setAdding(mainWindow.getSettingsLoader().newNetPing(mainWindow, "192.168.0.1"));
             addEditNetPingDialog.setVisible(true);
-            if(addEditNetPingDialog.getEditing()){
-
-            }
         });
 
         changeButton.addActionListener(e -> {
             if(netpingsTable.getSelectedRowCount() == 1){
                 int row = netpingsTable.getSelectedRows()[0];
-                //addEditNetPingDialog.setChangeNetping(model.getValueAt(row, 0).toString(), model.getValueAt(row, 1).toString());
+                addEditNetPingDialog.setEditing(model.getNetPingWidget(row));
                 addEditNetPingDialog.setVisible(true);
 
                 validationStatus.setText("");
@@ -200,10 +208,8 @@ public class SettingsWindow extends JFrame {
                 if (newStyle.equals(info.getName())) {
                     settingsLoaderIn.setStyle(newStyle);
                     UIManager.setLookAndFeel(info.getClassName());
-                    SwingUtilities.updateComponentTreeUI(this);
+                    mainWindow.updateStyle();
                     this.pack();
-                    SwingUtilities.updateComponentTreeUI(addEditNetPingDialog);
-                    addEditNetPingDialog.pack();
                     break;
                 }
             }
@@ -220,5 +226,41 @@ public class SettingsWindow extends JFrame {
         settingsLoaderIn.saveConfig();
 
         netpingsChangeInterfaceIn.changed();
+    }
+
+    void updateStyle(){
+        SwingUtilities.updateComponentTreeUI(this);
+        addEditNetPingDialog.updateStyle();
+        this.pack();
+    }
+
+    public MainWindow getMainWindow(){
+        return mainWindow;
+    }
+
+
+
+    private class NetPingTableModel extends DefaultTableModel{
+        NetPingTableModel(Vector<String> headIn){
+            super(headIn, 3);
+        }
+
+        void addNetPingWidget(NetPingWidget netPingWidgetIn){
+            Object[] row = {
+                    netPingWidgetIn.getIpAddress(),
+                    netPingWidgetIn.getDeviceName(),
+                    netPingWidgetIn
+            };
+
+            this.addRow(row);
+        }
+
+        void setNetPingWidget(NetPingWidget netPingWidgetIn, int rowIn){
+            this.setValueAt(netPingWidgetIn, rowIn, 2);
+        }
+
+        NetPingWidget getNetPingWidget(int rowIn){
+            return (NetPingWidget)this.getValueAt(rowIn, 2);
+        }
     }
 }

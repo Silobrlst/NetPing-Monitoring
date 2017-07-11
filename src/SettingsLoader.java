@@ -219,6 +219,7 @@ public class SettingsLoader {
         JSONObject netPingJSON;
 
         if(netPingsJSON.has(ipAddressIn)){
+            System.out.println(netPingsJSON.toString(5));
             netPingJSON = netPingsJSON.getJSONObject(ipAddressIn);
 
             NetPingWidget netPingWidget = new NetPingWidget(mainWindowIn, ipAddressIn);

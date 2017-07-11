@@ -94,7 +94,7 @@ public class MainWindow extends JFrame implements CommandResponder {
 
         checkingDelay.setText(Integer.toString(settingsLoader.getCheckingDelay()));
 
-        settingsWindow = new SettingsWindow(settingsLoader, () -> {
+        settingsWindow = new SettingsWindow(this, settingsLoader, () -> {
             try {
                 for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
                     if (settingsLoader.getStyle().equals(info.getName())) {
@@ -141,6 +141,12 @@ public class MainWindow extends JFrame implements CommandResponder {
             System.err.println("Exception Message = " + e.getMessage());
             JOptionPane.showMessageDialog(null, e.getMessage(), "Error in Listening for Trap", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+
+    void updateStyle(){
+        settingsWindow.updateStyle();
+        this.pack();
     }
 
 

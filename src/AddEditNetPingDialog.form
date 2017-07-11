@@ -89,7 +89,7 @@
               <text value="SNMP-порт:"/>
             </properties>
           </component>
-          <component id="11429" class="javax.swing.JTextField" binding="textField4" default-binding="true">
+          <component id="11429" class="javax.swing.JTextField" binding="snmpPort">
             <constraints>
               <grid row="3" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
                 <preferred-size width="150" height="-1"/>
@@ -97,7 +97,7 @@
             </constraints>
             <properties/>
           </component>
-          <component id="540ee" class="javax.swing.JTextField" binding="textField3" default-binding="true">
+          <component id="540ee" class="javax.swing.JTextField" binding="community">
             <constraints>
               <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
                 <preferred-size width="150" height="-1"/>
@@ -105,7 +105,7 @@
             </constraints>
             <properties/>
           </component>
-          <component id="8071e" class="javax.swing.JTextField" binding="textField2" default-binding="true">
+          <component id="8071e" class="javax.swing.JTextField" binding="deviceName">
             <constraints>
               <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
                 <preferred-size width="150" height="-1"/>
@@ -113,7 +113,7 @@
             </constraints>
             <properties/>
           </component>
-          <component id="47651" class="javax.swing.JTextField" binding="textField1" default-binding="true">
+          <component id="47651" class="javax.swing.JTextField" binding="ipAddress">
             <constraints>
               <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
                 <preferred-size width="150" height="-1"/>
@@ -144,7 +144,7 @@
                   <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                 </constraints>
               </hspacer>
-              <component id="9a3d" class="javax.swing.JLabel">
+              <component id="9a3d" class="javax.swing.JLabel" binding="line1Name">
                 <constraints>
                   <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                 </constraints>
@@ -152,7 +152,7 @@
                   <text value=""/>
                 </properties>
               </component>
-              <component id="82a2e" class="javax.swing.JButton" binding="настроитьButton" default-binding="true">
+              <component id="82a2e" class="javax.swing.JButton" binding="line1SettingsButton">
                 <constraints>
                   <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                 </constraints>
@@ -160,7 +160,7 @@
                   <text value="Настроить..."/>
                 </properties>
               </component>
-              <component id="97546" class="javax.swing.JCheckBox" binding="линия1CheckBox" default-binding="true">
+              <component id="97546" class="javax.swing.JCheckBox" binding="line1CheckBox">
                 <constraints>
                   <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                 </constraints>
@@ -184,7 +184,7 @@
                   <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                 </constraints>
               </hspacer>
-              <component id="a26f7" class="javax.swing.JLabel">
+              <component id="a26f7" class="javax.swing.JLabel" binding="line2Name">
                 <constraints>
                   <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                 </constraints>
@@ -192,7 +192,7 @@
                   <text value=""/>
                 </properties>
               </component>
-              <component id="f7a71" class="javax.swing.JButton" default-binding="true">
+              <component id="f7a71" class="javax.swing.JButton" binding="line2SettingsButton">
                 <constraints>
                   <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                 </constraints>
@@ -200,7 +200,7 @@
                   <text value="Настроить..."/>
                 </properties>
               </component>
-              <component id="115ed" class="javax.swing.JCheckBox" binding="линия2CheckBox" default-binding="true">
+              <component id="115ed" class="javax.swing.JCheckBox" binding="line2CheckBox">
                 <constraints>
                   <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                 </constraints>
@@ -224,7 +224,7 @@
                   <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                 </constraints>
               </hspacer>
-              <component id="9eabc" class="javax.swing.JLabel">
+              <component id="9eabc" class="javax.swing.JLabel" binding="line3Name">
                 <constraints>
                   <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                 </constraints>
@@ -232,7 +232,7 @@
                   <text value=""/>
                 </properties>
               </component>
-              <component id="829d1" class="javax.swing.JButton" default-binding="true">
+              <component id="829d1" class="javax.swing.JButton" binding="line3SettingsButton">
                 <constraints>
                   <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                 </constraints>
@@ -240,7 +240,7 @@
                   <text value="Настроить..."/>
                 </properties>
               </component>
-              <component id="f52db" class="javax.swing.JCheckBox" binding="линия3CheckBox" default-binding="true">
+              <component id="f52db" class="javax.swing.JCheckBox" binding="line3CheckBox">
                 <constraints>
                   <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                 </constraints>
@@ -264,7 +264,7 @@
                   <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                 </constraints>
               </hspacer>
-              <component id="a82b1" class="javax.swing.JLabel">
+              <component id="a82b1" class="javax.swing.JLabel" binding="line4Name">
                 <constraints>
                   <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                 </constraints>
@@ -272,7 +272,7 @@
                   <text value=""/>
                 </properties>
               </component>
-              <component id="f695d" class="javax.swing.JButton" default-binding="true">
+              <component id="f695d" class="javax.swing.JButton" binding="line4SettingsButton">
                 <constraints>
                   <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                 </constraints>
@@ -280,7 +280,7 @@
                   <text value="Настроить..."/>
                 </properties>
               </component>
-              <component id="51" class="javax.swing.JCheckBox" binding="линия4CheckBox" default-binding="true">
+              <component id="51" class="javax.swing.JCheckBox" binding="line4CheckBox">
                 <constraints>
                   <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                 </constraints>
