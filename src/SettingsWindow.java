@@ -25,11 +25,13 @@ public class SettingsWindow extends JFrame {
 
     private AddEditNetPingDialog addEditNetPingDialog;
 
+    private NetPingWidgetListener netPingWidgetListener;
     private MainWindow mainWindow;
 
-    SettingsWindow(MainWindow mainWindowIn, SettingsLoader settingsLoaderIn, NetpingsChangeInterface netpingsChangeInterfaceIn){
+    SettingsWindow(NetPingWidgetListener netPingWidgetListenerIn, MainWindow mainWindowIn){
         this.setTitle("Настройки");
 
+        netPingWidgetListener = netPingWidgetListenerIn;
         mainWindow = mainWindowIn;
 
         Vector<String> head = new Vector<>();

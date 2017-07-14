@@ -21,7 +21,7 @@ public class EditIOLineDialog extends JDialog {
 
     private AddEditNetPingDialog addEditNetPingDialog;
 
-    private String currentlineNumber;
+    private String currentLineNumber;
     private IOLineWidget currentIOLineWidget;
 
     public EditIOLineDialog(AddEditNetPingDialog addEditNetPingDialogIn) {
@@ -56,7 +56,7 @@ public class EditIOLineDialog extends JDialog {
     }
 
     private void onOK() {
-        addEditNetPingDialog.setLineName(currentlineNumber, lineName.getText());
+        addEditNetPingDialog.setLineName(currentLineNumber, lineName.getText());
         dispose();
     }
 
@@ -67,9 +67,9 @@ public class EditIOLineDialog extends JDialog {
 
 
     public void setIOLineEditing(IOLineWidget ioLineWidgetIn, String lineNumberIn){
-        currentlineNumber = lineNumberIn;
+        currentLineNumber = lineNumberIn;
         currentIOLineWidget = ioLineWidgetIn;
-        this.setTitle("Изменение линии " + currentlineNumber);
+        this.setTitle("Изменение линии " + currentLineNumber);
     }
 
     void updateStyle(){

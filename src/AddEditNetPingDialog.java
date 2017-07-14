@@ -23,7 +23,7 @@ public class AddEditNetPingDialog extends JDialog {
     private JLabel line4Name;
 
     private boolean editing; //режим редактирования - true, режим добавления - false
-    NetPingWidget currentNetPingWidget;
+    private NetPingWidget currentNetPingWidget;
 
     private EditIOLineDialog editIOLineDialog;
 
