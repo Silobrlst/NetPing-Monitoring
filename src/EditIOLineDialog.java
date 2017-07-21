@@ -5,19 +5,21 @@ public class EditIOLineDialog extends JDialog {
     private JPanel contentPane;
     private JButton buttonOK;
     private JButton buttonCancel;
+    private JTextField lineName;
+    private JTextField getOID;
+    private JTextField trapOID;
+
     private JTextField value0Message;
     private JPanel value0TextColor;
     private JPanel value0BackgroundColor;
     private JButton value0ChooseTextColorButton;
     private JButton value0ChooseBackgroundColorButton;
+
     private JTextField value1Message;
-    private JButton value1ChooseTextColorButton;
-    private JButton value1ChooseBackgroundColorButton;
-    private JTextField lineName;
-    private JTextField getOID;
-    private JTextField trapOID;
     private JPanel value1TextColor;
     private JPanel value1BackgroundColor;
+    private JButton value1ChooseTextColorButton;
+    private JButton value1ChooseBackgroundColorButton;
 
     private AddEditNetPingDialog addEditNetPingDialog;
 
@@ -75,9 +77,5 @@ public class EditIOLineDialog extends JDialog {
     void updateStyle(){
         SwingUtilities.updateComponentTreeUI(this);
         this.pack();
-    }
-
-    public MainWindow getMainWindow(){
-        return addEditNetPingDialog.getMainWindow();
     }
 }

@@ -1,7 +1,5 @@
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.Map;
 
 public class NetPingWidget extends JPanel {
     private JLabel deviceName;
@@ -15,32 +13,47 @@ public class NetPingWidget extends JPanel {
     private IOLineWidget line3;
     private IOLineWidget line4;
 
-    //<netping settings>==================
+    //<current netPing settings>==========
+    //примненные настройки
     private String snmpCommunity;
     private String snmpPort;
-
     private DisplayMessageSettings connectedMessage;
     private DisplayMessageSettings disconnectedMessage;
-    //</netping settings>=================
+    //</current netPing settings>=========
+
+    //<to apply netPing settings>=========
+    //настройки которые применятся после вызова applySettings()
+    private String snmpCommunityApply;
+    private String snmpPortApply;
+    private String deviceNameApply;
+    private String ipAddressApply;
+    //</to apply netPing settings>========
 
     private MainWindow mainWindow;
-    private boolean connnected;
+    private boolean connected;
     private AutoChecking autoChecking;
 
     NetPingWidget(MainWindow mainWindowIn, String ipAddressIn){
-        connnected = true;
-
         mainWindow = mainWindowIn;
 
+        connected = true;
         deviceName.setText("");
         ipAddressLabel.setText(ipAddressIn);
+
+        ipAddressApply = ipAddressLabel.getText();
+        deviceNameApply = deviceName.getText();
+
+        line1 = new IOLineWidget(this);
+        line2 = new IOLineWidget(this);
+        line3 = new IOLineWidget(this);
+        line4 = new IOLineWidget(this);
 
         this.add(rootPanel);
         this.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         autoChecking = new AutoChecking(() -> {
             status.setText("ping");
-        }, mainWindowIn.getDelay());
+        }, mainWindowIn.getCheckingDelay());
     }
 
     //<get>===============================
@@ -82,15 +95,43 @@ public class NetPingWidget extends JPanel {
                 return null;
         }
     }
+
+    public String getNotAppliedDeviceName(){
+        return deviceNameApply;
+    }
+    public String getNotAppliedSnmpPort(){
+        return snmpPortApply;
+    }
+    public String getNotAppliedIpAddress(){
+        return ipAddressApply;
+    }
+    public String getNotAppliedSnmpCommunity(){
+        return snmpCommunityApply;
+    }
     //</get>==============================
 
     //<set>===============================
+    //настройки не применятся пока не будет вызвана applySettings()
     public void setDeviceName(String deviceNameIn){
-        deviceName.setText(deviceNameIn);
+        deviceNameApply = deviceNameIn;
     }
-    public void setIpAddress(String deviceNameIn){
-        ipAddressLabel.setText(deviceNameIn);
+    public void setIpAddress(String ipAddressIn){
+        ipAddressApply = ipAddressIn;
     }
+    public void setSnmpCommunity(String snmpCommunityIn){
+        snmpCommunityApply = snmpCommunityIn;
+    }
+    public void setSnmpPort(String snmpPortIn){
+        snmpPortApply = snmpPortIn;
+    }
+    public void setConnectedMessage(DisplayMessageSettings connectedMessageIn){
+        connectedMessage = connectedMessageIn;
+    }
+    public void setDisconnectedMessage(DisplayMessageSettings disconnectedMessageIn){
+        disconnectedMessage = disconnectedMessageIn;
+    }
+
+    //изменение сосотяния связи с NetPing
     public void setConnected(){
         String ip = ipAddressLabel.getText();
         String name = deviceName.getText();
@@ -99,7 +140,7 @@ public class NetPingWidget extends JPanel {
         rootPanel.setBackground(connectedMessage.backgroundColor);
         ipStatePanel.setBackground(connectedMessage.backgroundColor);
 
-        if(!connnected){
+        if(!connected){
             mainWindow.getLogger().info("связь восстановлена с " + ip + " " + name);
             mainWindow.getTrayIcon().displayMessage(mainWindow.getAppName(), "связь восстановлена с \n"+name, TrayIcon.MessageType.INFO);
         }
@@ -112,26 +153,46 @@ public class NetPingWidget extends JPanel {
         rootPanel.setBackground(disconnectedMessage.backgroundColor);
         ipStatePanel.setBackground(disconnectedMessage.backgroundColor);
 
-        if(connnected){
+        if(connected){
             mainWindow.getLogger().info("потеряна связь с " + ip + " " + name);
             mainWindow.getTrayIcon().displayMessage(mainWindow.getAppName(), "потеряна связь с \n"+name, TrayIcon.MessageType.INFO);
         }
     }
-    public void setSnmpCommunity(String snmpCommunityIn){
-        snmpCommunity = snmpCommunityIn;
-    }
-    public void setSnmpPort(String snmpPortIn){
-        snmpPort = snmpPortIn;
-    }
-    public void setConnectedMessage(DisplayMessageSettings connectedMessageIn){
-        connectedMessage = connectedMessageIn;
-    }
-    public void setDisconnectedMessage(DisplayMessageSettings disconnectedMessageIn){
-        disconnectedMessage = disconnectedMessageIn;
+    //</set>==============================
+
+    //проверяет есть ли не применненные настройки
+    public boolean isSettingsNotSaved(){
+        boolean b = false;
+        b = b && snmpCommunityApply.equals(snmpCommunity);
+        b = b && snmpPortApply.equals(snmpPortApply);
+        b = b && deviceNameApply.equals(deviceName.getText());
+        b = b && ipAddressApply.equals(ipAddressLabel.getText());
+        return b;
     }
 
-    public boolean isModified(IOLineWidget data) {
-        return false;
+    //применяет настройки для виджета (вместе с внутренними виджетами)
+    public void applySettings(){
+        deviceName.setText(deviceNameApply);
+        ipAddressLabel.setText(ipAddressApply);
+        snmpPort = snmpPortApply;
+        snmpCommunity = snmpCommunityApply;
+
+        line1.applySettings();
+        line2.applySettings();
+        line3.applySettings();
+        line4.applySettings();
     }
-    //</set>==============================
+
+    //сбрасывает не применнеые настройки (вместе с внутренними виджетами)
+    public void discardSettings(){
+        deviceNameApply = deviceName.getText();
+        ipAddressApply = ipAddressLabel.getText();
+        snmpPortApply = snmpPort;
+        snmpCommunityApply = snmpCommunity;
+
+        line1.discardSettings();
+        line2.discardSettings();
+        line3.discardSettings();
+        line4.discardSettings();
+    }
 }

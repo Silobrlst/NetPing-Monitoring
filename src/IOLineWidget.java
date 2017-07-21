@@ -16,13 +16,23 @@ public class IOLineWidget extends JPanel {
     private JLabel messageText;
     private JPanel rootPanel;
 
-    //<line settings>=================
+    //<current line settings>=========
+    //примненные настройки
     private OID trapReceiveOID;
     private OID snmpGetOID;
     private VariableBinding snmpGetVariable;
     private DisplayMessageSettings value1Message;
     private DisplayMessageSettings value0Message;
-    //</line settings>================
+    //</current line settings>========
+
+    //<to apply line settings>========
+    //настройки которые применятся после вызова applySettings()
+    private String trapReceiveOIDApply;
+    private String snmpGetOIDApply;
+    private String lineNameApply;
+    private DisplayMessageSettings value1MessageApply;
+    private DisplayMessageSettings value0MessageApply;
+    //</to apply line settings>=======
 
     private Color defaultBackgroundColor;
     private AutoChecking autoChecking;
@@ -32,13 +42,12 @@ public class IOLineWidget extends JPanel {
         netPingWidget = netPingWidgetIn;
         snmpGetOID = null;
         trapReceiveOID = null;
-        snmpGetVariable = new VariableBinding(snmpGetOID);
+        snmpGetVariable = null;
         value1Message = new DisplayMessageSettings();
         value0Message = new DisplayMessageSettings();
 
         defaultBackgroundColor = this.getBackground();
 
-        lineName.setText("имя линии");
         messageText.setText("неизвестно");
 
         autoChecking = new AutoChecking(() -> {
@@ -55,8 +64,8 @@ public class IOLineWidget extends JPanel {
             comtarget.setCommunity(new OctetString(netPingWidget.getSnmpCommunity()));
             comtarget.setVersion(SnmpConstants.version1);
             comtarget.setAddress(new UdpAddress(netPingWidget.getIpAddress() + "/" + netPingWidget.getDeviceName()));
-            comtarget.setRetries(netPingWidget.getMainWindow().getSettingsLoader().getSnmpGetRetries());
-            comtarget.setTimeout(netPingWidget.getMainWindow().getSettingsLoader().getSnmpGetTimeout());
+            comtarget.setRetries(netPingWidget.getMainWindow().getSnmpRetries());
+            comtarget.setTimeout(netPingWidget.getMainWindow().getSnmpTimeOut());
 
             //checking.setText("проверка...");
 
@@ -102,19 +111,43 @@ public class IOLineWidget extends JPanel {
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
-        }, netPingWidget.getMainWindow().getSettingsLoader().getCheckingDelay());
+        }, netPingWidget.getMainWindow().getCheckingDelay());
     }
 
+    //<get>===============================
+    public String getLineName(){
+        return lineName.getText();
+    }
+    public DisplayMessageSettings getValue0Message(){
+        return value0Message;
+    }
+    public DisplayMessageSettings getValue1Message(){
+        return value1Message;
+    }
+    public OID getTrapReceiveOID(){
+        return trapReceiveOID;
+    }
+    public OID getSnmpGetOID(){
+        return snmpGetOID;
+    }
+    public AutoChecking getAutoChecking(){
+        return autoChecking;
+    }
+    //</get>==============================
+
+    //<set>===============================
+    //настройки не применятся пока не будет вызвана applySettings()
     public void setLineName(String lineNameIn){
-        lineName.setText(lineNameIn);
+        lineNameApply = lineNameIn;
     }
     public void setSnmpGetOID(String snmpGetOIDIn){
-        snmpGetOID = new OID(snmpGetOIDIn);
+        snmpGetOIDApply = snmpGetOIDIn;
     }
     public void setTrapReceiveOID(String trapReceiveOIDIn){
-        trapReceiveOID = new OID(trapReceiveOIDIn);
-        snmpGetVariable = new VariableBinding(trapReceiveOID);
+        trapReceiveOIDApply = trapReceiveOIDIn;
     }
+
+    //изменение сосотяния линии
     public void set1(){
         rootPanel.setBackground(value1Message.backgroundColor);
         messageText.setText(value1Message.messageText);
@@ -133,23 +166,28 @@ public class IOLineWidget extends JPanel {
         messageText.setForeground(Color.BLACK);
         lineName.setForeground(Color.BLACK);
     }
+    //</set>==============================
 
-    public String getLineName(){
-        return lineName.getText();
+    public void applySettings(){
+        lineName.setText(lineNameApply);
+        snmpGetOID = new OID(snmpGetOIDApply);
+        trapReceiveOID = new OID(trapReceiveOIDApply);
+        snmpGetVariable = new VariableBinding(trapReceiveOID);
     }
-    public DisplayMessageSettings getValue0Message(){
-        return value0Message;
-    }
-    public DisplayMessageSettings getValue1Message(){
-        return value1Message;
-    }
-    public OID getTrapReceiveOID(){
-        return trapReceiveOID;
-    }
-    public OID getSnmpGetOID(){
-        return snmpGetOID;
-    }
-    public AutoChecking getAutoChecking(){
-        return autoChecking;
+
+    public void discardSettings(){
+        lineNameApply = lineName.getText();
+
+        if(snmpGetOID == null){
+            snmpGetOIDApply = "";
+        }else{
+            snmpGetOIDApply = snmpGetOID.toString();
+        }
+
+        if(trapReceiveOID == null){
+            trapReceiveOIDApply = "";
+        }else{
+            trapReceiveOIDApply = trapReceiveOID.toString();
+        }
     }
 }

@@ -27,18 +27,14 @@ public class AddEditNetPingDialog extends JDialog {
 
     private EditIOLineDialog editIOLineDialog;
 
-    private SettingsWindow settingsWindow;
-
-    public AddEditNetPingDialog(SettingsWindow settingsWindowIn) {
-        super(settingsWindowIn, ModalityType.APPLICATION_MODAL);
-
-        settingsWindow = settingsWindowIn;
+    public AddEditNetPingDialog(SettingsDialog settingsDialogIn) {
+        super(settingsDialogIn, ModalityType.APPLICATION_MODAL);
 
         setContentPane(contentPane);
         setModal(true);
         getRootPane().setDefaultButton(buttonOK);
 
-        buttonOK.addActionListener(e -> onCancel());
+        buttonOK.addActionListener(e -> onOK());
 
         buttonCancel.addActionListener(e -> onCancel());
 
@@ -76,23 +72,34 @@ public class AddEditNetPingDialog extends JDialog {
     }
 
     private void onOK() {
-        // add your code here
+        currentNetPingWidget.setIpAddress(ipAddress.getText());
+        currentNetPingWidget.setSnmpPort(snmpPort.getText());
+        currentNetPingWidget.setSnmpCommunity(community.getText());
+        currentNetPingWidget.setDeviceName(deviceName.getText());
         dispose();
     }
 
     private void onCancel() {
-        // add your code here if necessary
         dispose();
     }
 
     public void setAdding(NetPingWidget netPingWidgetIn){
+        ipAddress.requestFocus();
+
         editing = false;
         currentNetPingWidget = netPingWidgetIn;
+        ipAddress.setText(netPingWidgetIn.getIpAddress());
         this.setTitle("Добавление NetPing");
     }
     public void setEditing(NetPingWidget netPingWidgetIn){
+        ipAddress.requestFocus();
+
         editing = true;
         currentNetPingWidget = netPingWidgetIn;
+        ipAddress.setText(netPingWidgetIn.getNotAppliedIpAddress());
+        deviceName.setText(netPingWidgetIn.getNotAppliedDeviceName());
+        community.setText(netPingWidgetIn.getNotAppliedSnmpCommunity());
+        snmpPort.setText(netPingWidgetIn.getNotAppliedSnmpPort());
         this.setTitle("Изменение NetPing");
     }
 
@@ -100,10 +107,6 @@ public class AddEditNetPingDialog extends JDialog {
         SwingUtilities.updateComponentTreeUI(this);
         editIOLineDialog.updateStyle();
         this.pack();
-    }
-
-    public boolean getEditing(){
-        return editing;
     }
 
     void setLineName(String lineNumberIn, String nameIn){
@@ -136,9 +139,5 @@ public class AddEditNetPingDialog extends JDialog {
             default:
                 return null;
         }
-    }
-
-    public MainWindow getMainWindow(){
-        return settingsWindow.getMainWindow();
     }
 }

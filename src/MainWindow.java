@@ -17,26 +17,34 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
 import java.util.*;
-import java.util.List;
 
 public class MainWindow extends JFrame implements CommandResponder {
     private JLabel appStatus;
     private JPanel netPingGrid;
     private JPanel rootPanel;
     private JButton settingsButton;
-    private JTextField checkingDelay;
 
     private boolean trayIconVisible;
 
-    private SettingsWindow settingsWindow;
+    private SettingsDialog settingsDialog;
 
     private final String appName = "NetPing мониторинг";
     private Logger logger;
-    private SettingsLoader settingsLoader;
     private Snmp snmp;
     private TrayIcon trayIcon;
 
     private Map<String, NetPingWidget> ipMap;
+
+    private String community;
+
+    private Integer checkingDelay;
+    private Integer snmpRetries;
+    private Integer snmpTimeOut;
+
+    private GridLayout gridLayout;
+
+    private String receiveTrapsIpAddress;
+    private String receiveTrapsPort;
 
 
     private void initTrayIcon() {
@@ -47,7 +55,7 @@ public class MainWindow extends JFrame implements CommandResponder {
         trayMenu.add(item);
 
         item = new MenuItem("Настройки");
-        item.addActionListener(e -> settingsWindow.setVisible(true));
+        item.addActionListener(e -> settingsDialog.setVisible(true));
         trayMenu.add(item);
 
         item = new MenuItem("Выход");
@@ -58,78 +66,35 @@ public class MainWindow extends JFrame implements CommandResponder {
         trayIcon = new TrayIcon(icon, "Netping мониторинг", trayMenu);
     }
 
-    private void initLogger() {
-        logger = LogManager.getFormatterLogger("MainWindow");
-    }
-
     private void init() {
-        initLogger();
+        logger = LogManager.getFormatterLogger("MainWindow");
 
         snmp = null;
 
         ipMap = new HashMap<>();
 
-        settingsLoader = new SettingsLoader("config.json");
-        SnmpSettings snmpSettings = settingsLoader.getSnmpSettings();
-        String address = snmpSettings.ipAddress + "/" + snmpSettings.snmpTrapsPort;
+        receiveTrapsIpAddress = "0.0.0.0";
+        receiveTrapsPort = "162";
+        String address = receiveTrapsIpAddress + "/" + receiveTrapsPort;
 
-        GridLayout gridLayout = new GridLayout(settingsLoader.getGridRows(), settingsLoader.getGridCollumns());
+        gridLayout = new GridLayout();
         netPingGrid.setLayout(gridLayout);
 
-        try {
-            for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
-                if (settingsLoader.getStyle().equals(info.getName())) {
-                    UIManager.setLookAndFeel(info.getClassName());
-                    SwingUtilities.updateComponentTreeUI(this);
-                    this.pack();
-                    break;
-                }
-            }
-        } catch (Exception ex) {
-            // If Nimbus is not available, you can set the GUI to another look and feel.
-        }
-
         trayIconVisible = false;
-        setTrayIconVisible(settingsLoader.isTrayIcon());
+        checkingDelay = 60;
+        snmpRetries = 4;
+        snmpTimeOut = 3;
 
-        checkingDelay.setText(Integer.toString(settingsLoader.getCheckingDelay()));
+        MainWindow mainWindowContext = this;
 
-        settingsWindow = new SettingsWindow(this, settingsLoader, () -> {
-            try {
-                for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
-                    if (settingsLoader.getStyle().equals(info.getName())) {
-                        UIManager.setLookAndFeel(info.getClassName());
-                        SwingUtilities.updateComponentTreeUI(this);
-                        this.pack();
-                        break;
-                    }
-                }
-            } catch (Exception ex) {
-                // If Nimbus is not available, you can set the GUI to another look and feel.
+        settingsDialog = new SettingsDialog(this){
+            @Override
+            public void applied() {
+                mainWindowContext.setStyle(settingsDialog.getStyle());
             }
+        };
 
-            setTrayIconVisible(settingsLoader.isTrayIcon());
-
-            List<String> ipAddresses = settingsLoader.getNetPingIpAddresses();
-
-            //удаляем лишние
-            for (String ip: ipMap.keySet()) {
-                if (!ipAddresses.contains(ip)) {
-                    deleteNetping(ip);
-                }
-            }
-
-            //добавляем новые или изменяем существующие
-            for (String ip : ipAddresses) {
-                netPingGrid.add(settingsLoader.loadNetPing(this, ip));
-                netPingGrid.revalidate();
-                netPingGrid.repaint();
-            }
-
-            this.pack();
-        });
-
-        settingsButton.addActionListener(e -> settingsWindow.setVisible(true));
+        settingsButton.addActionListener(e -> settingsDialog.setVisible(true));
 
         //при завершении програмыы
         Runtime.getRuntime().addShutdownHook(new Thread(() -> logger.info("мониторинг остановлен")));
@@ -144,40 +109,23 @@ public class MainWindow extends JFrame implements CommandResponder {
     }
 
 
-    void updateStyle(){
-        settingsWindow.updateStyle();
-        this.pack();
-    }
+    public MainWindow() {
+        community = "SWITCH";
 
-
-    private MainWindow() {
         this.setTitle(appName);
 
         initTrayIcon();
-
-        checkingDelay.addActionListener(e -> {
-            if (checkingDelay.getText().matches("^[1-9]\\d*")) {
-                int delay = Integer.parseInt(checkingDelay.getText());
-
-                settingsLoader.setCheckTime(delay);
-                settingsLoader.saveConfig();
-            } else {
-                checkingDelay.setText(Integer.toString(settingsLoader.getCheckingDelay()));
-            }
-        });
 
         appStatus.setText("Запуск...");
 
         this.getContentPane().add(rootPanel);
         this.pack();
         this.setVisible(true);
+        this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
         this.init();
     }
 
-    public static void main(String[] args) {
-        new MainWindow();
-    }
 
     private synchronized void listen(TransportIpAddress address) throws IOException {
         AbstractTransportMapping transport;
@@ -200,24 +148,12 @@ public class MainWindow extends JFrame implements CommandResponder {
 
         //Create Target
         CommunityTarget target = new CommunityTarget();
-        target.setCommunity(new OctetString(settingsLoader.getSnmpSettings().community));
+        target.setCommunity(new OctetString(community));
 
         TransportMapping transportGet = new DefaultUdpTransportMapping();
         transportGet.listen();
         snmp = new Snmp(mtDispatcher, transportGet);
         snmp.addCommandResponder(this);
-
-        //<init netping widgets>==========================
-        List<String> ipAddresses = settingsLoader.getNetPingIpAddresses();
-        for (String ip : ipAddresses) {
-            NetPingWidget netPingWidget = settingsLoader.loadNetPing(this, ip);
-            ipMap.put(ip, netPingWidget);
-            netPingGrid.add(netPingWidget);
-            netPingGrid.revalidate();
-            netPingGrid.repaint();
-        }
-        this.pack();
-        //</init netping widgets>=========================
 
         transport.listen();
         String message = "прием SNMP-ловушек: " + address;
@@ -278,7 +214,12 @@ public class MainWindow extends JFrame implements CommandResponder {
     }
 
 
-    private void setTrayIconVisible(boolean visibleIn){
+    public void setReceiveAddress(String receiveTrapsIpAddressIn, String receiveTrapsPortIn){
+        receiveTrapsIpAddress = receiveTrapsIpAddressIn;
+        receiveTrapsPort = receiveTrapsPortIn;
+    }
+
+    public void setTrayIconVisible(boolean visibleIn){
         SystemTray tray = SystemTray.getSystemTray();
 
         if(visibleIn){
@@ -300,39 +241,75 @@ public class MainWindow extends JFrame implements CommandResponder {
         }
     }
 
+    public void setStyle(String styleIn){
+        try {
+            for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
+                if (styleIn.equals(info.getName())) {
+                    UIManager.setLookAndFeel(info.getClassName());
+                    SwingUtilities.updateComponentTreeUI(this);
+                    settingsDialog.updateStyle();
+                    this.pack();
+                    break;
+                }
+            }
+        } catch (Exception ex) {
+            // If Nimbus is not available, you can set the GUI to another look and feel.
+        }
+    }
 
-    private void deleteNetping(String ipAddressIn) {
-        String name = ipMap.get(ipAddressIn).getDeviceName();
-        netPingGrid.remove(ipMap.get(ipAddressIn));
+    public void setCommunity(String communityIn){
+        community = communityIn;
+    }
+
+    public String getCommunity(){
+        return community;
+    }
+
+    public boolean getTrayIconVisible(){
+        return trayIconVisible;
+    }
+
+    public void setGridSize(int columnsIn, int rowsIn){
+        gridLayout.setColumns(columnsIn);
+        gridLayout.setRows(rowsIn);
+    }
+
+
+    public void addNetPingWidget(NetPingWidget netPingWidgetIn){
+        ipMap.put(netPingWidgetIn.getIpAddress(), netPingWidgetIn);
+        netPingGrid.add(netPingWidgetIn);
         netPingGrid.revalidate();
         netPingGrid.repaint();
         this.pack();
-
-        logger.info("удалён netping " + ipAddressIn + " " + name);
     }
 
 
+    public Integer getSnmpTimeOut(){
+        return snmpTimeOut;
+    }
+    public Integer getSnmpRetries(){
+        return snmpRetries;
+    }
+    public Integer getCheckingDelay(){
+        return checkingDelay;
+    }
+    public String getStyle(){
+        return UIManager.getLookAndFeel().getName();
+    }
     public String getAppName(){
         return appName;
     }
-
     public Snmp getSnmp(){
         return snmp;
     }
-
-    public SettingsLoader getSettingsLoader(){
-        return settingsLoader;
-    }
-
     public Logger getLogger(){
         return logger;
     }
-
     public TrayIcon getTrayIcon(){
         return trayIcon;
     }
 
-    public int getDelay(){
-        return Integer.parseInt(checkingDelay.getText());
+    public Collection<NetPingWidget> getNetPingWidgets(){
+        return ipMap.values();
     }
 }
