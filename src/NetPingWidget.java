@@ -8,6 +8,7 @@ public class NetPingWidget extends JPanel {
     private JLabel ipAddressLabel;
     private JPanel ipStatePanel;
     private JLabel checking;
+    private JPanel linesPanel;
     private IOLineWidget line1;
     private IOLineWidget line2;
     private IOLineWidget line3;
@@ -43,10 +44,16 @@ public class NetPingWidget extends JPanel {
         ipAddressApply = ipAddressLabel.getText();
         deviceNameApply = deviceName.getText();
 
-        line1 = new IOLineWidget(this);
-        line2 = new IOLineWidget(this);
-        line3 = new IOLineWidget(this);
-        line4 = new IOLineWidget(this);
+        line1 = new IOLineWidget(this, "1");
+        line2 = new IOLineWidget(this, "2");
+        line3 = new IOLineWidget(this, "3");
+        line4 = new IOLineWidget(this, "4");
+
+        linesPanel.setLayout(new GridLayout(4, 1));
+        linesPanel.add(line1);
+        linesPanel.add(line2);
+        linesPanel.add(line3);
+        linesPanel.add(line4);
 
         this.add(rootPanel);
         this.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -131,7 +138,21 @@ public class NetPingWidget extends JPanel {
         disconnectedMessage = disconnectedMessageIn;
     }
 
-    //изменение сосотяния связи с NetPing
+    public void setLineActive(String lineNumberIn, boolean activeIn){
+        IOLineWidget ioLineWidget = this.getLine(lineNumberIn);
+        ioLineWidget.setActive(activeIn);
+
+        if(activeIn){
+            linesPanel.add(ioLineWidget);
+        }else{
+            linesPanel.remove(ioLineWidget);
+        }
+
+        linesPanel.revalidate();
+        linesPanel.repaint();
+    }
+
+    //изменение состояния связи с NetPing
     public void setConnected(){
         String ip = ipAddressLabel.getText();
         String name = deviceName.getText();
@@ -160,16 +181,6 @@ public class NetPingWidget extends JPanel {
     }
     //</set>==============================
 
-    //проверяет есть ли не применненные настройки
-    public boolean isSettingsNotSaved(){
-        boolean b = false;
-        b = b && snmpCommunityApply.equals(snmpCommunity);
-        b = b && snmpPortApply.equals(snmpPortApply);
-        b = b && deviceNameApply.equals(deviceName.getText());
-        b = b && ipAddressApply.equals(ipAddressLabel.getText());
-        return b;
-    }
-
     //применяет настройки для виджета (вместе с внутренними виджетами)
     public void applySettings(){
         deviceName.setText(deviceNameApply);
@@ -183,7 +194,7 @@ public class NetPingWidget extends JPanel {
         line4.applySettings();
     }
 
-    //сбрасывает не применнеые настройки (вместе с внутренними виджетами)
+    //сбрасывает не применненые настройки (вместе с внутренними виджетами)
     public void discardSettings(){
         deviceNameApply = deviceName.getText();
         ipAddressApply = ipAddressLabel.getText();

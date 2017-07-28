@@ -34,22 +34,53 @@ public class IOLineWidget extends JPanel {
     private DisplayMessageSettings value0MessageApply;
     //</to apply line settings>=======
 
+    private String lineNumber;
     private Color defaultBackgroundColor;
     private AutoChecking autoChecking;
     private NetPingWidget netPingWidget;
+    private int currentState;
+    private boolean active;
 
-    IOLineWidget(NetPingWidget netPingWidgetIn){
+    IOLineWidget(NetPingWidget netPingWidgetIn, String lineNumberIn){
         netPingWidget = netPingWidgetIn;
-        snmpGetOID = null;
-        trapReceiveOID = null;
-        snmpGetVariable = null;
+        lineNumber = lineNumberIn;
         value1Message = new DisplayMessageSettings();
         value0Message = new DisplayMessageSettings();
+
+        value1MessageApply = value1Message;
+        value0MessageApply = value0Message;
+
+        switch(lineNumberIn){
+            case "1":
+                snmpGetOIDApply = "1.3.6.1.4.1.25728.8900.1.1.2.1";
+                break;
+            case "2":
+                snmpGetOIDApply = "1.3.6.1.4.1.25728.8900.1.1.2.2";
+                break;
+            case "3":
+                snmpGetOIDApply = "1.3.6.1.4.1.25728.8900.1.1.2.3";
+                break;
+            case "4":
+                snmpGetOIDApply = "1.3.6.1.4.1.25728.8900.1.1.2.4";
+                break;
+            default:
+                snmpGetOIDApply = "1.3.6.1.4.1.25728.8900.1.1.2.1";
+                break;
+        }
+
+
+        trapReceiveOIDApply = "1.3.6.1.4.1.25728.8900.2.2.0";
+        lineNameApply = "";
+
+        snmpGetOID = new OID(snmpGetOIDApply);
+        trapReceiveOID = new OID(trapReceiveOIDApply);
+        snmpGetVariable = new VariableBinding(snmpGetOID);
 
         defaultBackgroundColor = this.getBackground();
 
         messageText.setText("неизвестно");
 
+        currentState = -1;
         autoChecking = new AutoChecking(() -> {
             if(trapReceiveOID == null || snmpGetOID == null){
                 return;
@@ -64,10 +95,10 @@ public class IOLineWidget extends JPanel {
             comtarget.setCommunity(new OctetString(netPingWidget.getSnmpCommunity()));
             comtarget.setVersion(SnmpConstants.version1);
             comtarget.setAddress(new UdpAddress(netPingWidget.getIpAddress() + "/" + netPingWidget.getDeviceName()));
-            comtarget.setRetries(netPingWidget.getMainWindow().getSnmpRetries());
-            comtarget.setTimeout(netPingWidget.getMainWindow().getSnmpTimeOut());
+            comtarget.setRetries(netPingWidget.getMainWindow().getRetries());
+            comtarget.setTimeout(netPingWidget.getMainWindow().getTimeOut());
 
-            //checking.setText("проверка...");
+            messageText.setText("проверка...");
 
             try {
                 ResponseEvent response = netPingWidget.getMainWindow().getSnmp().get(pdu, comtarget);
@@ -107,11 +138,13 @@ public class IOLineWidget extends JPanel {
                     setError();
                 }
 
-                //checking.setText("");
+                messageText.setText("");
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
         }, netPingWidget.getMainWindow().getCheckingDelay());
+
+        this.add(rootPanel);
     }
 
     //<get>===============================
@@ -133,6 +166,29 @@ public class IOLineWidget extends JPanel {
     public AutoChecking getAutoChecking(){
         return autoChecking;
     }
+
+    public boolean getActive(){
+        return active;
+    }
+
+    public String getNotAppliedTrapReceiveOID(){
+        return trapReceiveOIDApply;
+    }
+    public String getNotAppliedSnmpGetOID(){
+        return snmpGetOIDApply;
+    }
+    public String getNotAppliedLineName(){
+        return lineNameApply;
+    }
+    public DisplayMessageSettings getNotAppliedValue0Message(){
+        return value0MessageApply;
+    }
+    public DisplayMessageSettings getNotAppliedValue1Message(){
+        return value1MessageApply;
+    }
+    public String getLineNumber(){
+        return lineNumber;
+    }
     //</get>==============================
 
     //<set>===============================
@@ -146,19 +202,31 @@ public class IOLineWidget extends JPanel {
     public void setTrapReceiveOID(String trapReceiveOIDIn){
         trapReceiveOIDApply = trapReceiveOIDIn;
     }
+    public void setValue1Message(DisplayMessageSettings value1MessageIn){
+        value1MessageApply = value1MessageIn;
+    }
+    public void setValue0Message(DisplayMessageSettings value0MessageIn){
+        value0MessageApply = value0MessageIn;
+    }
 
-    //изменение сосотяния линии
+    public void setActive(boolean activeIn){
+        active = activeIn;
+    }
+
+    //изменение состояния линии
     public void set1(){
         rootPanel.setBackground(value1Message.backgroundColor);
         messageText.setText(value1Message.messageText);
         messageText.setForeground(value1Message.textColor);
         lineName.setForeground(value1Message.textColor);
+        currentState = 1;
     }
     public void set0(){
         rootPanel.setBackground(value0Message.backgroundColor);
         messageText.setText(value0Message.messageText);
         messageText.setForeground(value0Message.textColor);
         lineName.setForeground(value0Message.textColor);
+        currentState = 0;
     }
     public void setError(){
         rootPanel.setBackground(defaultBackgroundColor);
@@ -173,8 +241,17 @@ public class IOLineWidget extends JPanel {
         snmpGetOID = new OID(snmpGetOIDApply);
         trapReceiveOID = new OID(trapReceiveOIDApply);
         snmpGetVariable = new VariableBinding(trapReceiveOID);
-    }
 
+        value1Message = value1MessageApply;
+        value0Message = value0MessageApply;
+
+        if(currentState == 1){
+            set1();
+        }else if(currentState == 0){
+            set0();
+        }
+
+    }
     public void discardSettings(){
         lineNameApply = lineName.getText();
 
@@ -189,5 +266,8 @@ public class IOLineWidget extends JPanel {
         }else{
             trapReceiveOIDApply = trapReceiveOID.toString();
         }
+
+        value1MessageApply = value1Message;
+        value0MessageApply = value0Message;
     }
 }
