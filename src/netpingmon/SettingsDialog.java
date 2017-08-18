@@ -1,3 +1,5 @@
+package netpingmon;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
@@ -82,12 +84,12 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
         });
     }
 
+    //<on>==============================================================================================================
     private void onOK() {
         if(apply()){
             dispose();
         }
     }
-
     private void onCancel() {
         //отменяем настройки для каждого netPing
         for(int i=0; i<model.getRowCount(); i++){
@@ -96,7 +98,6 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
 
         dispose();
     }
-
     private void onDefault(){
         trayIcon.setSelected(false);
         style.setSelectedItem("Metal");
@@ -109,7 +110,6 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
 
         validationStatus.setText("");
     }
-
     private void onAdd(){
         NetPingWidget netPingWidget = new NetPingWidget(mainWindow, "192.168.0.1");
         addEditNetPingDialog.setAdding(netPingWidget);
@@ -117,7 +117,6 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
             model.addNetPingWidget(netPingWidget);
         }
     }
-
     private void onChange(){
         if(netPingsTable.getSelectedRowCount() == 1){
             int row = netPingsTable.getSelectedRows()[0];
@@ -134,7 +133,6 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
             validationStatus.setText("для изменения нужно выбрать 1 элемент");
         }
     }
-
     private void onDelete(){
         //сортируем для правильного удаления
         int[] primitiveRows = netPingsTable.getSelectedRows();
@@ -152,7 +150,6 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
 
         validationStatus.setText("");
     }
-
     private void onShown(){
         trayIcon.setSelected(mainWindow.getTrayIconVisible());
 
@@ -178,6 +175,7 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
         validationStatus.setText("");
         this.pack();
     }
+    //</on>=============================================================================================================
 
     private boolean apply(){
         String intRegex = "^[1-9]\\d*";
@@ -194,7 +192,8 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
 
             //применяем настройки для каждого netPing
             for(int i=0; i<model.getRowCount(); i++){
-                ((NetPingWidget)model.getValueAt(i, 2)).applySettings();
+                NetPingWidget netPingWidget = ((NetPingWidget)model.getValueAt(i, 2));
+                netPingWidget.applySettings();
             }
 
             applied();
@@ -227,7 +226,7 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
         this.pack();
     }
 
-    //<get>===============================
+    //<get>=============================================================================================================
     public String getSnmpTrapPort(){
         return snmpTrapPort.getText();
     }
@@ -260,7 +259,7 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
 
         return netPingWidgets;
     }
-    //</get>==============================
+    //</get>============================================================================================================
 
     public boolean isNetPingExist(String ipAddressIn){
         for(int i=0; i<model.getRowCount(); i++){

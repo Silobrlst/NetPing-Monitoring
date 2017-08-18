@@ -1,5 +1,5 @@
 Manifest-Version: 1.0
 Class-Path: libs/snmp4j-2.5.6.jar libs/json-20160810.jar libs/log4j-ap
  i-2.8.2.jar libs/log4j-core-2.8.2.jar
-Main-Class: MainWindow
+Main-Class: netpingmon.MainWindow
 

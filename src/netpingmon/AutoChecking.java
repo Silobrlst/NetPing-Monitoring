@@ -1,3 +1,5 @@
+package netpingmon;
+
 import java.util.TimerTask;
 
 public class AutoChecking {
@@ -38,5 +40,9 @@ public class AutoChecking {
 
     void stop(){
         autoCheckEnable = false;
+    }
+
+    void setDelay(int delayIn){
+        delaySeconds = delayIn;
     }
 }

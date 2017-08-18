@@ -1,3 +1,5 @@
+package netpingmon;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.snmp4j.*;
@@ -16,9 +18,6 @@ import org.snmp4j.util.ThreadPool;
 import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.*;
 
 public class MainWindow extends JFrame implements CommandResponder {
@@ -26,21 +25,21 @@ public class MainWindow extends JFrame implements CommandResponder {
     private JPanel netPingGrid;
     private JPanel rootPanel;
     private JButton settingsButton;
-    private GridLayout gridLayout;
+    private GridLayout gridLayout = new GridLayout();
 
     private final String appName = "NetPing мониторинг";
-    private Logger logger;
-    private Snmp snmp;
+    private Logger logger = LogManager.getFormatterLogger("MainWindow");
+    private Snmp snmp = null;
     private TrayIcon trayIcon;
-    private Map<String, NetPingWidget> ipMap;
-    private boolean trayIconVisible;
+    private Map<String, NetPingWidget> ipMap = new HashMap<>();
+    private boolean trayIconVisible = false;
 
-    private String community;
     private Integer receiveTrapsPort;
     private Integer snmpPort;
-    private Integer checkingDelay;
-    private Integer retries;
-    private Integer timeOut;
+    private String community = "SWITCH";
+    private Integer checkingDelay = 60;
+    private Integer retries = 4;
+    private Integer timeOut = 3;
 
     private SettingsDialog settingsDialog;
     private SettingsLoader settingsLoader;
@@ -65,7 +64,6 @@ public class MainWindow extends JFrame implements CommandResponder {
     }
 
     private void init() {
-        gridLayout = new GridLayout();
         netPingGrid.setLayout(gridLayout);
 
         MainWindow mainWindowContext = this;
@@ -116,7 +114,7 @@ public class MainWindow extends JFrame implements CommandResponder {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> logger.info("мониторинг остановлен")));
     }
 
-    public void startListen(){
+    void startListen(){
         try {
             this.listen(new UdpAddress(receiveTrapsPort));
         } catch (IOException e) {
@@ -127,20 +125,10 @@ public class MainWindow extends JFrame implements CommandResponder {
     }
 
 
-    public MainWindow(SettingsLoader settingsLoaderIn, Integer receiveTrapsPortIn, Integer snmpPortIn) {
+    MainWindow(SettingsLoader settingsLoaderIn, Integer receiveTrapsPortIn, Integer snmpPortIn) {
         settingsLoader = settingsLoaderIn;
-
-        logger = LogManager.getFormatterLogger("MainWindow");
-        snmp = null;
-        ipMap = new HashMap<>();
-
-        trayIconVisible = false;
         receiveTrapsPort = receiveTrapsPortIn;
         snmpPort = snmpPortIn;
-        community = "SWITCH";
-        checkingDelay = 60;
-        retries = 4;
-        timeOut = 3;
 
         this.setTitle(appName);
         appStatus.setText("Запуск...");
@@ -153,26 +141,19 @@ public class MainWindow extends JFrame implements CommandResponder {
         this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
         this.init();
-
-        try{
-            InetAddress addr = InetAddress.getByName("172.28.27.101");
-
-            long qwe =  System.currentTimeMillis();
-
-            if(addr.isReachable(3000)){
-                System.out.println("reached");
-            }else{
-                System.out.println("unreached");
-            }
-
-            System.out.println(System.currentTimeMillis() - qwe);
-
-        }catch (IOException ex){
-            ex.printStackTrace();
-        }
     }
 
+    private void lineReceiveTrap(IOLineWidget ioLineWidgetIn, PDU pduIn){
+        if (pduIn.getVariable(ioLineWidgetIn.getTrapReceiveOID()) != null) {
+            int opened = pduIn.getVariable(ioLineWidgetIn.getTrapReceiveOID()).toInt();
 
+            if (opened == 0) {
+                ioLineWidgetIn.set0();
+            } else {
+                ioLineWidgetIn.set1();
+            }
+        }
+    }
     private synchronized void listen(TransportIpAddress address) throws IOException {
         AbstractTransportMapping transport;
         if (address instanceof TcpAddress) {
@@ -207,25 +188,14 @@ public class MainWindow extends JFrame implements CommandResponder {
         trayIcon.displayMessage(appName, "запущен", TrayIcon.MessageType.INFO);
         appStatus.setText(message);
 
+        ipMap.values().forEach(netPingWidget -> netPingWidget.startChecking());
+
         try {
             this.wait();
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
         }
     }
-
-    public void lineReceiveTrap(IOLineWidget ioLineWidgetIn, PDU pduIn){
-        if (pduIn.getVariable(ioLineWidgetIn.getTrapReceiveOID()) != null) {
-            int opened = pduIn.getVariable(ioLineWidgetIn.getTrapReceiveOID()).toInt();
-
-            if (opened == 0) {
-                ioLineWidgetIn.set0();
-            } else {
-                ioLineWidgetIn.set1();
-            }
-        }
-    }
-
     public synchronized void processPdu(CommandResponderEvent cmdRespEvent) {
         PDU pdu = cmdRespEvent.getPDU();
         if (pdu != null) {
@@ -259,20 +229,20 @@ public class MainWindow extends JFrame implements CommandResponder {
         }
     }
 
-    //<set>===============================
-    public void setCheckingDelay(Integer checkingDelayIn){
+    //<set>=============================================================================================================
+    void setCheckingDelay(Integer checkingDelayIn){
         checkingDelay = checkingDelayIn;
     }
-    public void setTimeOut(Integer timeOutIn){
+    void setTimeOut(Integer timeOutIn){
         timeOut = timeOutIn;
     }
-    public void setRetries(Integer retriesIn){
+    void setRetries(Integer retriesIn){
         retries = retriesIn;
     }
-    public void setSnmpCommunity(String communityIn){
+    void setSnmpCommunity(String communityIn){
         community = communityIn;
     }
-    public void setTrayIconVisible(boolean visibleIn){
+    void setTrayIconVisible(boolean visibleIn){
         SystemTray tray = SystemTray.getSystemTray();
 
         if(visibleIn){
@@ -293,7 +263,7 @@ public class MainWindow extends JFrame implements CommandResponder {
             this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         }
     }
-    public void setStyle(String styleIn){
+    void setStyle(String styleIn){
         try {
             for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
                 if (styleIn.equals(info.getName())) {
@@ -312,16 +282,16 @@ public class MainWindow extends JFrame implements CommandResponder {
         gridLayout.setColumns(columnsIn);
         gridLayout.setRows(rowsIn);
     }
-    //</set>==============================
+    //</set>============================================================================================================
 
-    public void addNetPingWidget(NetPingWidget netPingWidgetIn){
+    void addNetPingWidget(NetPingWidget netPingWidgetIn){
         ipMap.put(netPingWidgetIn.getIpAddress(), netPingWidgetIn);
         netPingGrid.add(netPingWidgetIn);
         netPingGrid.revalidate();
         netPingGrid.repaint();
         this.pack();
     }
-    public void addNetPingWidgets(Collection<NetPingWidget> netPingWidgetsIn){
+    void addNetPingWidgets(Collection<NetPingWidget> netPingWidgetsIn){
         for(NetPingWidget netPingWidget: netPingWidgetsIn){
             ipMap.put(netPingWidget.getIpAddress(), netPingWidget);
             netPingGrid.add(netPingWidget);
@@ -331,8 +301,8 @@ public class MainWindow extends JFrame implements CommandResponder {
         netPingGrid.repaint();
         this.pack();
     }
-
-    public void removeNetPingWidget(NetPingWidget netPingWidgetIn){
+    void removeNetPingWidget(NetPingWidget netPingWidgetIn){
+        netPingWidgetIn.setActive(false);
         ipMap.remove(netPingWidgetIn.getIpAddress());
         netPingGrid.remove(netPingWidgetIn);
         netPingGrid.revalidate();
@@ -340,45 +310,45 @@ public class MainWindow extends JFrame implements CommandResponder {
         this.pack();
     }
 
-    //<get>===============================
-    public Integer getSnmpPort(){
+    //<get>=============================================================================================================
+    Integer getSnmpPort(){
         return snmpPort;
     }
-    public String getSnmpCommunity(){
+    String getSnmpCommunity(){
         return community;
     }
-    public Integer getReceiveTrapsPort(){
+    Integer getReceiveTrapsPort(){
         return receiveTrapsPort;
     }
-    public Integer getTimeOut(){
+    Integer getTimeOut(){
         return timeOut;
     }
-    public Integer getRetries(){
+    Integer getRetries(){
         return retries;
     }
-    public Integer getCheckingDelay(){
+    Integer getCheckingDelay(){
         return checkingDelay;
     }
-    public String getStyle(){
+    String getStyle(){
         return UIManager.getLookAndFeel().getName();
     }
-    public String getAppName(){
+    String getAppName(){
         return appName;
     }
-    public Snmp getSnmp(){
+    Snmp getSnmp(){
         return snmp;
     }
-    public Logger getLogger(){
+    Logger getLogger(){
         return logger;
     }
-    public TrayIcon getTrayIcon(){
+    TrayIcon getTrayIcon(){
         return trayIcon;
     }
-    public boolean getTrayIconVisible(){
+    boolean getTrayIconVisible(){
         return trayIconVisible;
     }
-    public Collection<NetPingWidget> getNetPingWidgets(){
+    Collection<NetPingWidget> getNetPingWidgets(){
         return ipMap.values();
     }
-    //</get>==============================
+    //</get>============================================================================================================
 }

@@ -1,3 +1,5 @@
+package netpingmon;
+
 import org.snmp4j.CommunityTarget;
 import org.snmp4j.PDU;
 import org.snmp4j.event.ResponseEvent;
@@ -16,23 +18,22 @@ public class IOLineWidget extends JPanel {
     private JLabel messageText;
     private JPanel rootPanel;
 
-    //<current line settings>=========
+    //<current settings>================================================================================================
     //примненные настройки
     private OID trapReceiveOID;
     private OID snmpGetOID;
     private VariableBinding snmpGetVariable;
-    private DisplayMessageSettings value1Message;
-    private DisplayMessageSettings value0Message;
-    //</current line settings>========
+    //</current settings>===============================================================================================
 
-    //<to apply line settings>========
-    //настройки которые применятся после вызова applySettings()
+    //<to apply settings>===============================================================================================
+    //новые непримёненные настройки, применятся после вызова applySettings()
     private String trapReceiveOIDApply;
     private String snmpGetOIDApply;
     private String lineNameApply;
-    private DisplayMessageSettings value1MessageApply;
-    private DisplayMessageSettings value0MessageApply;
-    //</to apply line settings>=======
+    //</to apply settings>==============================================================================================
+
+    private DisplayMessage value0Message;
+    private DisplayMessage value1Message;
 
     private String lineNumber;
     private Color defaultBackgroundColor;
@@ -44,11 +45,8 @@ public class IOLineWidget extends JPanel {
     IOLineWidget(NetPingWidget netPingWidgetIn, String lineNumberIn){
         netPingWidget = netPingWidgetIn;
         lineNumber = lineNumberIn;
-        value1Message = new DisplayMessageSettings();
-        value0Message = new DisplayMessageSettings();
-
-        value1MessageApply = value1Message;
-        value0MessageApply = value0Message;
+        value0Message = new DisplayMessage();
+        value1Message = new DisplayMessage();
 
         switch(lineNumberIn){
             case "1":
@@ -78,8 +76,6 @@ public class IOLineWidget extends JPanel {
 
         defaultBackgroundColor = this.getBackground();
 
-        messageText.setText("неизвестно");
-
         currentState = -1;
         autoChecking = new AutoChecking(() -> {
             if(trapReceiveOID == null || snmpGetOID == null){
@@ -91,17 +87,17 @@ public class IOLineWidget extends JPanel {
             pdu.setType(PDU.GET);
 
             // Create Target Address object
-            CommunityTarget comtarget = new CommunityTarget();
-            comtarget.setCommunity(new OctetString(netPingWidget.getSnmpCommunity()));
-            comtarget.setVersion(SnmpConstants.version1);
-            comtarget.setAddress(new UdpAddress(netPingWidget.getIpAddress() + "/" + netPingWidget.getDeviceName()));
-            comtarget.setRetries(netPingWidget.getMainWindow().getRetries());
-            comtarget.setTimeout(netPingWidget.getMainWindow().getTimeOut());
+            CommunityTarget comTarget = new CommunityTarget();
+            comTarget.setCommunity(new OctetString(netPingWidget.getSnmpCommunity()));
+            comTarget.setVersion(SnmpConstants.version1);
+            comTarget.setAddress(new UdpAddress(netPingWidget.getIpAddress() + "/" + netPingWidget.getDeviceName()));
+            comTarget.setRetries(netPingWidget.getMainWindow().getRetries());
+            comTarget.setTimeout(netPingWidget.getMainWindow().getTimeOut());
 
             messageText.setText("проверка...");
 
             try {
-                ResponseEvent response = netPingWidget.getMainWindow().getSnmp().get(pdu, comtarget);
+                ResponseEvent response = netPingWidget.getMainWindow().getSnmp().get(pdu, comTarget);
 
                 // Process Agent Response
                 if (response != null) {
@@ -147,112 +143,104 @@ public class IOLineWidget extends JPanel {
         this.add(rootPanel);
     }
 
-    //<get>===============================
-    public String getLineName(){
+    //<get>=============================================================================================================
+    String getLineName(){
         return lineName.getText();
     }
-    public DisplayMessageSettings getValue0Message(){
+    DisplayMessage getValue0Message(){
         return value0Message;
     }
-    public DisplayMessageSettings getValue1Message(){
+    DisplayMessage getValue1Message(){
         return value1Message;
     }
-    public OID getTrapReceiveOID(){
+    OID getTrapReceiveOID(){
         return trapReceiveOID;
     }
-    public OID getSnmpGetOID(){
+    OID getSnmpGetOID(){
         return snmpGetOID;
     }
-    public AutoChecking getAutoChecking(){
-        return autoChecking;
-    }
 
-    public boolean getActive(){
+    boolean getActive(){
         return active;
     }
 
-    public String getNotAppliedTrapReceiveOID(){
+    String getNotAppliedTrapReceiveOID(){
         return trapReceiveOIDApply;
     }
-    public String getNotAppliedSnmpGetOID(){
+    String getNotAppliedSnmpGetOID(){
         return snmpGetOIDApply;
     }
-    public String getNotAppliedLineName(){
+    String getNotAppliedLineName(){
         return lineNameApply;
     }
-    public DisplayMessageSettings getNotAppliedValue0Message(){
-        return value0MessageApply;
-    }
-    public DisplayMessageSettings getNotAppliedValue1Message(){
-        return value1MessageApply;
-    }
-    public String getLineNumber(){
+    String getLineNumber(){
         return lineNumber;
     }
-    //</get>==============================
+    //</get>============================================================================================================
 
-    //<set>===============================
+    //<set>=============================================================================================================
     //настройки не применятся пока не будет вызвана applySettings()
-    public void setLineName(String lineNameIn){
+    void setLineName(String lineNameIn){
         lineNameApply = lineNameIn;
     }
-    public void setSnmpGetOID(String snmpGetOIDIn){
+    void setSnmpGetOID(String snmpGetOIDIn){
         snmpGetOIDApply = snmpGetOIDIn;
     }
-    public void setTrapReceiveOID(String trapReceiveOIDIn){
+    void setTrapReceiveOID(String trapReceiveOIDIn){
         trapReceiveOIDApply = trapReceiveOIDIn;
     }
-    public void setValue1Message(DisplayMessageSettings value1MessageIn){
-        value1MessageApply = value1MessageIn;
-    }
-    public void setValue0Message(DisplayMessageSettings value0MessageIn){
-        value0MessageApply = value0MessageIn;
-    }
 
-    public void setActive(boolean activeIn){
+    void setActive(boolean activeIn){
         active = activeIn;
     }
 
-    //изменение состояния линии
-    public void set1(){
-        rootPanel.setBackground(value1Message.backgroundColor);
-        messageText.setText(value1Message.messageText);
-        messageText.setForeground(value1Message.textColor);
-        lineName.setForeground(value1Message.textColor);
-        currentState = 1;
+    void startChecking(){
+        autoChecking.start();
     }
-    public void set0(){
-        rootPanel.setBackground(value0Message.backgroundColor);
-        messageText.setText(value0Message.messageText);
-        messageText.setForeground(value0Message.textColor);
-        lineName.setForeground(value0Message.textColor);
+    void stopChecking(){
+        autoChecking.stop();
+    }
+
+    //изменение состояния линии
+    void set0(){
+        applyDisplayMessage(value0Message);
         currentState = 0;
     }
-    public void setError(){
+    void set1(){
+        applyDisplayMessage(value1Message);
+        currentState = 1;
+    }
+    private void setError(){
         rootPanel.setBackground(defaultBackgroundColor);
         messageText.setText("Ошибка");
         messageText.setForeground(Color.BLACK);
         lineName.setForeground(Color.BLACK);
     }
-    //</set>==============================
+    //</set>============================================================================================================
 
-    public void applySettings(){
+    private void applyDisplayMessage(DisplayMessage displayMessageIn){
+        rootPanel.setBackground(displayMessageIn.getBackgroundColor());
+        messageText.setText(displayMessageIn.getMessageText());
+        messageText.setForeground(displayMessageIn.getTextColor());
+        lineName.setForeground(displayMessageIn.getTextColor());
+    }
+
+    void applySettings(){
         lineName.setText(lineNameApply);
         snmpGetOID = new OID(snmpGetOIDApply);
         trapReceiveOID = new OID(trapReceiveOIDApply);
         snmpGetVariable = new VariableBinding(trapReceiveOID);
 
-        value1Message = value1MessageApply;
-        value0Message = value0MessageApply;
+        value0Message.applySettings();
+        value1Message.applySettings();
 
         if(currentState == 1){
             set1();
         }else if(currentState == 0){
             set0();
         }
-
     }
-    public void discardSettings(){
+    void discardSettings(){
         lineNameApply = lineName.getText();
 
         if(snmpGetOID == null){
@@ -267,7 +255,7 @@ public class IOLineWidget extends JPanel {
             trapReceiveOIDApply = trapReceiveOID.toString();
         }
 
-        value1MessageApply = value1Message;
-        value0MessageApply = value0Message;
+        value0Message.discardSettings();
+        value1Message.discardSettings();
     }
 }

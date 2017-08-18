@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="IOLineWidget">
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="netpingmon.IOLineWidget">
   <grid id="27dc6" binding="rootPanel" layout-manager="GridLayoutManager" row-count="2" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
     <margin top="5" left="5" bottom="5" right="5"/>
     <constraints>
-      <xy x="20" y="20" width="72" height="63"/>
+      <xy x="20" y="20" width="84" height="63"/>
     </constraints>
     <properties/>
     <border type="bevel-raised"/>
@@ -14,7 +14,8 @@
         </constraints>
         <properties>
           <font style="1"/>
-          <text value="line name"/>
+          <text value="Имя линии"/>
+          <toolTipText value="Имя линии"/>
         </properties>
       </component>
       <component id="daddd" class="javax.swing.JLabel" binding="messageText">
@@ -22,7 +23,8 @@
           <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
         </constraints>
         <properties>
-          <text value="state"/>
+          <text value="Неизвестно"/>
+          <toolTipText value="Состояние линии"/>
         </properties>
       </component>
     </children>

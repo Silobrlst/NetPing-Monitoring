@@ -1,3 +1,5 @@
+package netpingmon;
+
 import java.util.Map;
 
 public interface NetpingsChangeInterface {
