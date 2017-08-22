@@ -10,8 +10,17 @@ import org.snmp4j.smi.UdpAddress;
 import org.snmp4j.smi.VariableBinding;
 
 import javax.swing.*;
+import javax.swing.border.BevelBorder;
+import javax.swing.border.Border;
+import javax.swing.border.EtchedBorder;
+import javax.swing.plaf.basic.BasicBorders;
+import javax.swing.plaf.metal.MetalBorders;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.IOException;
+import java.util.concurrent.Callable;
 
 public class IOLineWidget extends JPanel {
     private JLabel lineName;
@@ -42,6 +51,12 @@ public class IOLineWidget extends JPanel {
     private int currentState;
     private boolean active;
 
+    JPopupMenu popup = new JPopupMenu();
+
+    private EditIOLineDialog editIOLineDialog = new EditIOLineDialog(null);
+
+    private static final String messageToolTipText = "<html>Состояние линии:<Br>";
+
     IOLineWidget(NetPingWidget netPingWidgetIn, String lineNumberIn){
         netPingWidget = netPingWidgetIn;
         lineNumber = lineNumberIn;
@@ -66,6 +81,28 @@ public class IOLineWidget extends JPanel {
                 break;
         }
 
+        //<подсветка при навдении курсора>==============================================================================
+        EtchedBorder etchedBorder = new EtchedBorder();
+        Border originalBorder = rootPanel.getBorder();
+
+        MouseAdapter mouseAdapter = new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                super.mouseEntered(e);
+                rootPanel.setBorder(etchedBorder);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                super.mouseExited(e);
+                rootPanel.setBorder(originalBorder);
+            }
+        };
+
+        rootPanel.addMouseListener(mouseAdapter);
+        messageText.addMouseListener(mouseAdapter);
+        lineName.addMouseListener(mouseAdapter);
+        //</подсветка при навдении курсора>=============================================================================
 
         trapReceiveOIDApply = "1.3.6.1.4.1.25728.8900.2.2.0";
         lineNameApply = "";
@@ -77,8 +114,9 @@ public class IOLineWidget extends JPanel {
         defaultBackgroundColor = this.getBackground();
 
         currentState = -1;
-        autoChecking = new AutoChecking(() -> {
-            if(trapReceiveOID == null || snmpGetOID == null){
+
+        Runnable checkFunction = () -> {
+            if(trapReceiveOID == null || snmpGetOID == null || netPingWidget.getMainWindow().getSnmp() == null){
                 return;
             }
 
@@ -90,7 +128,7 @@ public class IOLineWidget extends JPanel {
             CommunityTarget comTarget = new CommunityTarget();
             comTarget.setCommunity(new OctetString(netPingWidget.getSnmpCommunity()));
             comTarget.setVersion(SnmpConstants.version1);
-            comTarget.setAddress(new UdpAddress(netPingWidget.getIpAddress() + "/" + netPingWidget.getDeviceName()));
+            comTarget.setAddress(new UdpAddress(netPingWidget.getIpAddress() + "/162"));
             comTarget.setRetries(netPingWidget.getMainWindow().getRetries());
             comTarget.setTimeout(netPingWidget.getMainWindow().getTimeOut());
 
@@ -123,24 +161,47 @@ public class IOLineWidget extends JPanel {
                             System.out.println("Error Status = " + errorStatus);
                             System.out.println("Error Index = " + errorIndex);
                             System.out.println("Error Status Text = " + errorStatusText);
-                            setError();
+                            setError("Error: Request Failed");
                         }
                     } else {
                         //System.out.println("Error: Response PDU is null");
-                        setError();
+                        setError("Error: Response PDU is null");
                     }
                 } else {
                     //System.out.println("Error: Agent Timeout... ");
-                    setError();
+                    setError("Error: Agent Timeout... ");
                 }
-
-                messageText.setText("");
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
-        }, netPingWidget.getMainWindow().getCheckingDelay());
+        };
+
+        autoChecking = new AutoChecking(checkFunction, netPingWidget.getMainWindow().getCheckingDelay());
+
+        //<контекстное меню>============================================================================================
+        MouseListener popupListener = new PopupListener();
+        rootPanel.addMouseListener(popupListener);
+        messageText.addMouseListener(popupListener);
+        lineName.addMouseListener(popupListener);
+
+        JMenuItem checkItem = new JMenuItem("Проверить");
+        JMenuItem editItem = new JMenuItem("Изменить");
+        popup.add(checkItem);
+        popup.add(editItem);
+
+        IOLineWidget context = this;
+        checkItem.addActionListener(e -> new Thread(checkFunction).start());
+        editItem.addActionListener(e -> {
+            editIOLineDialog.open(context, getLineNumber());
+            context.repaint();
+        });
+        //</контекстное меню>===========================================================================================
 
         this.add(rootPanel);
+    }
+
+    boolean isActive(){
+        return active;
     }
 
     //<get>=============================================================================================================
@@ -158,10 +219,6 @@ public class IOLineWidget extends JPanel {
     }
     OID getSnmpGetOID(){
         return snmpGetOID;
-    }
-
-    boolean getActive(){
-        return active;
     }
 
     String getNotAppliedTrapReceiveOID(){
@@ -189,16 +246,18 @@ public class IOLineWidget extends JPanel {
     void setTrapReceiveOID(String trapReceiveOIDIn){
         trapReceiveOIDApply = trapReceiveOIDIn;
     }
+    void setCheckingDelay(int delayIn){
+        autoChecking.setDelay(delayIn);
+    }
 
     void setActive(boolean activeIn){
-        active = activeIn;
-    }
+        if(activeIn && !active){
+            autoChecking.start();
+        }else if(!activeIn && active){
+            autoChecking.stop();
+        }
 
-    void startChecking(){
-        autoChecking.start();
-    }
-    void stopChecking(){
-        autoChecking.stop();
+        active = activeIn;
     }
 
     //изменение состояния линии
@@ -210,17 +269,34 @@ public class IOLineWidget extends JPanel {
         applyDisplayMessage(value1Message);
         currentState = 1;
     }
-    private void setError(){
+    void setError(String commentIn){
         rootPanel.setBackground(defaultBackgroundColor);
         messageText.setText("Ошибка");
+        messageText.setToolTipText(messageToolTipText + commentIn + "</html>");
         messageText.setForeground(Color.BLACK);
         lineName.setForeground(Color.BLACK);
     }
     //</set>============================================================================================================
 
+    void copyTo(IOLineWidget ioLineWidgetIn){
+        ioLineWidgetIn.setLineName(getLineName());
+        ioLineWidgetIn.setSnmpGetOID(getSnmpGetOID().toString());
+        ioLineWidgetIn.setTrapReceiveOID(getTrapReceiveOID().toString());
+
+        getValue0Message().copyTo(ioLineWidgetIn.getValue0Message());
+        getValue1Message().copyTo(ioLineWidgetIn.getValue1Message());
+    }
+
+    void snmpInitialized(){
+        if(isActive()){
+            autoChecking.start();
+        }
+    }
+
     private void applyDisplayMessage(DisplayMessage displayMessageIn){
         rootPanel.setBackground(displayMessageIn.getBackgroundColor());
         messageText.setText(displayMessageIn.getMessageText());
+        messageText.setToolTipText(messageToolTipText + displayMessageIn.getMessageText() + "</html>");
         messageText.setForeground(displayMessageIn.getTextColor());
         lineName.setForeground(displayMessageIn.getTextColor());
     }
@@ -228,8 +304,9 @@ public class IOLineWidget extends JPanel {
     void applySettings(){
         lineName.setText(lineNameApply);
         snmpGetOID = new OID(snmpGetOIDApply);
+        snmpGetVariable = new VariableBinding(snmpGetOID);
+
         trapReceiveOID = new OID(trapReceiveOIDApply);
-        snmpGetVariable = new VariableBinding(trapReceiveOID);
 
         value0Message.applySettings();
         value1Message.applySettings();
@@ -257,5 +334,27 @@ public class IOLineWidget extends JPanel {
 
         value0Message.discardSettings();
         value1Message.discardSettings();
+    }
+
+    void updateStyle(){
+        SwingUtilities.updateComponentTreeUI(this);
+        editIOLineDialog.updateStyle();
+    }
+
+    class PopupListener extends MouseAdapter {
+        public void mousePressed(MouseEvent e) {
+            maybeShowPopup(e);
+        }
+
+        public void mouseReleased(MouseEvent e) {
+            maybeShowPopup(e);
+        }
+
+        private void maybeShowPopup(MouseEvent e) {
+            if (e.isPopupTrigger()) {
+                popup.show(e.getComponent(),
+                        e.getX(), e.getY());
+            }
+        }
     }
 }

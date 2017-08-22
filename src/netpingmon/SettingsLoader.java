@@ -10,7 +10,7 @@ public class SettingsLoader {
     private static final String snmpPortJsonName = "snmpPort";
     private static final String snmpCommunityJsonName = "snmpCommunity";
     private static final String snmpTrapPortJsonName = "receiveTrapsPort";
-    private static final String checkingDelayJsonName = "checkingDelay";
+    private static final String checkingDelayJsonName = "setCheckingDelay";
     private static final String trayIconJsonName = "trayIcon";
     private static final String styleJsonName = "style";
     private static final String gridRowsJsonName = "gridRows";
@@ -40,7 +40,7 @@ public class SettingsLoader {
     }
 
     public static void main(String[] args) {
-        JSONObject settingsJSON = JSONLoader.loadJSON(settingsFile);
+        JSONObject settingsJSON = JsonLoader.loadJSON(settingsFile);
         validateSettings(settingsJSON);
 
         Integer snmpTrapPort = settingsJSON.getInt(snmpTrapPortJsonName);
@@ -223,7 +223,7 @@ public class SettingsLoader {
         settingsJSON.put(timeOutJsonName, settingsDialogIn.getTimeOut());
         saveNetPings(settingsDialogIn.getNetPingWidgets(), settingsJSON);
 
-        JSONLoader.saveJSON(settingsFile, settingsJSON);
+        JsonLoader.saveJSON(settingsFile, settingsJSON);
     }
     private void saveNetPings(Collection<NetPingWidget> netPingWidgetsIn, JSONObject settingsJSONIn){
         JSONObject netPingsJSON = settingsJSONIn.getJSONObject(netPingsJsonName);
@@ -276,7 +276,7 @@ public class SettingsLoader {
         lineJSON.put(nameJsonName, ioLineWidget.getLineName());
         lineJSON.put(getOID, ioLineWidget.getSnmpGetOID());
         lineJSON.put(trapOID, ioLineWidget.getTrapReceiveOID());
-        lineJSON.put(lineActiveJsonName, ioLineWidget.getActive());
+        lineJSON.put(lineActiveJsonName, ioLineWidget.isActive());
 
         JSONObject value0MessageJSON = new JSONObject();
         saveDisplayMessage(netPingWidgetIn.getLine(lineNumberIn).getValue0Message(), value0MessageJSON);

@@ -1,6 +1,7 @@
 package netpingmon;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.*;
 
 public class EditDisplayMessageDialog extends JDialog {
@@ -16,6 +17,8 @@ public class EditDisplayMessageDialog extends JDialog {
     private DisplayMessage editingDisplayMessage;
 
     private int openResult;
+
+    private GuiSaver guiSaver = new GuiSaver(this, "EditDisplayMessageDialog");
 
     EditDisplayMessageDialog(JDialog parentIn) {
         super(parentIn, ModalityType.APPLICATION_MODAL);
@@ -40,14 +43,39 @@ public class EditDisplayMessageDialog extends JDialog {
         // call onCancel() on ESCAPE
         contentPane.registerKeyboardAction(e -> onCancel(), KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
 
-        chooseTextColorButton.addActionListener(e -> textColor.setBackground(JColorChooser.showDialog(this, "Выбор цвета текста", textColor.getBackground())));
-        chooseBackgroundColorButton.addActionListener(e -> backgroundColor.setBackground(JColorChooser.showDialog(this, "Выбор цвета фона", backgroundColor.getBackground())));
+        chooseTextColorButton.addActionListener(e -> {
+            Color color = JColorChooser.showDialog(this, "Выбор цвета текста", textColor.getBackground());
+            if(color != null){
+                textColor.setBackground(color);
+            }
+        });
+        chooseBackgroundColorButton.addActionListener(e -> {
+            Color color = JColorChooser.showDialog(this, "Выбор цвета фона", backgroundColor.getBackground());
+            if(color != null){
+                backgroundColor.setBackground(color);
+            }
+        });
+
+        this.pack();
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                super.windowClosing(e);
+                guiSaver.save();
+            }
+        });
+
+        guiSaver.saveWindowMaximized(true);
+        guiSaver.load();
     }
 
     private void onOK() {
         editingDisplayMessage.setBackgroundColor(backgroundColor.getBackground());
         editingDisplayMessage.setMessageText(message.getText());
         editingDisplayMessage.setTextColor(textColor.getBackground());
+
+        editingDisplayMessage.applySettings();
 
         openResult = JOptionPane.OK_OPTION;
         dispose();
@@ -70,6 +98,7 @@ public class EditDisplayMessageDialog extends JDialog {
         textColor.setBackground(editingDisplayMessage.getNotAppliedTextColor());
         backgroundColor.setBackground(editingDisplayMessage.getNotAppliedBackgroundColor());
 
+        this.pack();
         this.setVisible(true);
         return openResult;
     }

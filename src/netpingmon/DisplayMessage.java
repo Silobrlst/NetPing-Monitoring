@@ -2,7 +2,7 @@ package netpingmon;
 
 import java.awt.*;
 
-public class DisplayMessage {
+class DisplayMessage {
     //<current settings>================================================================================================
     private String messageText = "";
     private Color backgroundColor = new Color(0, 0, 0);
@@ -55,6 +55,12 @@ public class DisplayMessage {
         return textColorApply;
     }
     //</get>============================================================================================================
+
+    void copyTo(DisplayMessage displayMessageIn){
+        displayMessageIn.setMessageText(getMessageText());
+        displayMessageIn.setTextColor(getTextColor());
+        displayMessageIn.setBackgroundColor(getBackgroundColor());
+    }
 
     void applySettings(){
         messageText = messageTextApply;

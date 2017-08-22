@@ -1,7 +1,11 @@
 package netpingmon;
 
 import javax.swing.*;
+import javax.swing.border.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.IOException;
 import java.net.InetAddress;
 
@@ -38,8 +42,16 @@ public class NetPingWidget extends JPanel {
     private Boolean connected = null;
     private AutoChecking autoChecking;
 
+    JPopupMenu popup = new JPopupMenu();
+
+    AddEditNetPingDialog addEditNetPingDialog;
+
+    private static final String messageToolTipText = "<html>Состояние связи с NetPing:<Br>";
+
     NetPingWidget(MainWindow mainWindowIn, String ipAddressIn){
         mainWindow = mainWindowIn;
+
+        addEditNetPingDialog = new AddEditNetPingDialog(mainWindow);
 
         deviceName.setText("");
         ipAddress.setText(ipAddressIn);
@@ -58,10 +70,53 @@ public class NetPingWidget extends JPanel {
         linesPanel.add(line3);
         linesPanel.add(line4);
 
+        connectedMessage.setBackgroundColor(DefaultSettings.backgroundColorConnected);
+        connectedMessage.setTextColor(DefaultSettings.textColorConnected);
+
+        disconnectedMessage.setBackgroundColor(DefaultSettings.backgroundColorDisconnected);
+        disconnectedMessage.setTextColor(DefaultSettings.textColorDisconnected);
+
         this.add(rootPanel);
         this.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        autoChecking = new AutoChecking(() -> {
+        //<подсветка при навдении курсора>==============================================================================
+        EtchedBorder etchedBorder = new EtchedBorder();
+        Border originalBorder = rootPanel.getBorder();
+
+        MouseAdapter mouseAdapter = new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                super.mouseEntered(e);
+                rootPanel.setBorder(etchedBorder);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                super.mouseExited(e);
+                rootPanel.setBorder(originalBorder);
+            }
+        };
+
+        rootPanel.addMouseListener(mouseAdapter);
+        deviceName.addMouseListener(mouseAdapter);
+        ipAddress.addMouseListener(mouseAdapter);
+        checking.addMouseListener(mouseAdapter);
+        ipAddressLabel.addMouseListener(mouseAdapter);
+        //</подсветка при навдении курсора>=============================================================================
+
+        MouseListener popupListener = new PopupListener();
+        rootPanel.addMouseListener(popupListener);
+        deviceName.addMouseListener(popupListener);
+        ipAddress.addMouseListener(popupListener);
+        checking.addMouseListener(popupListener);
+        ipAddressLabel.addMouseListener(popupListener);
+
+        JMenuItem checkItem = new JMenuItem("Проверить");
+        JMenuItem editItem = new JMenuItem("Изменить");
+        popup.add(checkItem);
+        popup.add(editItem);
+
+        Runnable checkFunction = () -> {
             boolean reached = false;
 
             checking.setText("проверка...");
@@ -84,7 +139,17 @@ public class NetPingWidget extends JPanel {
             }else{
                 setDisconnected();
             }
-        }, mainWindowIn.getCheckingDelay());
+        };
+
+        autoChecking = new AutoChecking(checkFunction, mainWindowIn.getCheckingDelay());
+
+        NetPingWidget context = this;
+        checkItem.addActionListener(e -> new Thread(checkFunction).start());
+        editItem.addActionListener(e -> {
+            addEditNetPingDialog.setEditing(this);
+            addEditNetPingDialog.open();
+            context.repaint();
+        });
     }
 
     //<get>=============================================================================================================
@@ -152,6 +217,14 @@ public class NetPingWidget extends JPanel {
     void setSnmpPort(String snmpPortIn){
         snmpPortApply = snmpPortIn;
     }
+    void setCheckingDelay(int delayIn){
+        autoChecking.setDelay(delayIn);
+
+        line1.setCheckingDelay(delayIn);
+        line2.setCheckingDelay(delayIn);
+        line3.setCheckingDelay(delayIn);
+        line4.setCheckingDelay(delayIn);
+    }
 
     void setLineActive(String lineNumberIn, boolean activeIn){
         IOLineWidget ioLineWidget = this.getLine(lineNumberIn);
@@ -168,7 +241,7 @@ public class NetPingWidget extends JPanel {
     }
     void setActive(boolean activeIn){
         if(!activeIn){
-            stopChecking();
+            autoChecking.start();
             line1.setActive(false);
             line2.setActive(false);
             line3.setActive(false);
@@ -213,11 +286,30 @@ public class NetPingWidget extends JPanel {
     }
     //</set>============================================================================================================
 
-    void startChecking(){
-        autoChecking.start();
+    //копирует все настройки (кроме ip-адрес) этого netPing'а в netPingWidgetIn
+    void copyTo(NetPingWidget netPingWidgetIn){
+        netPingWidgetIn.setDeviceName(getDeviceName());
+        netPingWidgetIn.setSnmpCommunity(getSnmpCommunity());
+        netPingWidgetIn.setSnmpPort(getSnmpPort());
+
+        connectedMessage.copyTo(netPingWidgetIn.getConnectedMessage());
+        disconnectedMessage.copyTo(netPingWidgetIn.getDisconnectedMessage());
+
+        line1.copyTo(netPingWidgetIn.getLine("1"));
+        line2.copyTo(netPingWidgetIn.getLine("2"));
+        line3.copyTo(netPingWidgetIn.getLine("3"));
+        line4.copyTo(netPingWidgetIn.getLine("4"));
+
+        netPingWidgetIn.applySettings();
     }
-    void stopChecking(){
+
+    void snmpInitialized(){
         autoChecking.start();
+
+        line1.snmpInitialized();
+        line2.snmpInitialized();
+        line3.snmpInitialized();
+        line4.snmpInitialized();
     }
 
     private void applyDisplayMessage(DisplayMessage displayMessageIn){
@@ -227,6 +319,7 @@ public class NetPingWidget extends JPanel {
         ipAddressLabel.setForeground(displayMessageIn.getTextColor());
 
         checking.setText(displayMessageIn.getMessageText());
+        checking.setToolTipText(messageToolTipText + displayMessageIn.getMessageText() + "</html>");
 
         rootPanel.setBackground(displayMessageIn.getBackgroundColor());
         ipStatePanel.setBackground(displayMessageIn.getBackgroundColor());
@@ -275,5 +368,32 @@ public class NetPingWidget extends JPanel {
         line2.discardSettings();
         line3.discardSettings();
         line4.discardSettings();
+    }
+
+    void updateStyle(){
+        SwingUtilities.updateComponentTreeUI(this);
+        addEditNetPingDialog.updateStyle();
+
+        line1.updateStyle();
+        line2.updateStyle();
+        line3.updateStyle();
+        line4.updateStyle();
+    }
+
+    class PopupListener extends MouseAdapter {
+        public void mousePressed(MouseEvent e) {
+            maybeShowPopup(e);
+        }
+
+        public void mouseReleased(MouseEvent e) {
+            maybeShowPopup(e);
+        }
+
+        private void maybeShowPopup(MouseEvent e) {
+            if (e.isPopupTrigger()) {
+                popup.show(e.getComponent(),
+                        e.getX(), e.getY());
+            }
+        }
     }
 }

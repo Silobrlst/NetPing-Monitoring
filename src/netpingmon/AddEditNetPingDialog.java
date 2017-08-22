@@ -35,14 +35,16 @@ public class AddEditNetPingDialog extends JDialog {
 
     private int openResult;
 
-    private SettingsDialog settingsDialog;
-
     private EditDisplayMessageDialog editDisplayMessageDialog = new EditDisplayMessageDialog(this);
 
-    AddEditNetPingDialog(SettingsDialog settingsDialogIn) {
-        super(settingsDialogIn, ModalityType.APPLICATION_MODAL);
+    private MainWindow mainWindow;
 
-        settingsDialog = settingsDialogIn;
+    private GuiSaver guiSaver = new GuiSaver(this, "AddEditNetPingDialog");
+
+    AddEditNetPingDialog(MainWindow mainWindowIn) {
+        super(mainWindowIn, ModalityType.APPLICATION_MODAL);
+
+        mainWindow = mainWindowIn;
 
         setContentPane(contentPane);
         setModal(true);
@@ -97,6 +99,17 @@ public class AddEditNetPingDialog extends JDialog {
         });
 
         this.pack();
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                super.windowClosing(e);
+                guiSaver.save();
+            }
+        });
+
+        guiSaver.saveWindowMaximized(true);
+        guiSaver.load();
     }
 
     //<on>==============================================================================================================
@@ -104,7 +117,7 @@ public class AddEditNetPingDialog extends JDialog {
         boolean valid;
         boolean ipAddressValid = ipAddress.getText().matches("([0-9]{1,3}\\.){3}[0-9]{1,3}");
         boolean snmpPortValid = snmpPort.getText().matches("^[1-9]\\d*");
-        boolean ipAddressExist = settingsDialog.isNetPingExist(ipAddress.getText());
+        boolean ipAddressExist = mainWindow.isNetPingExist(ipAddress.getText());
 
         valid = ipAddressValid;
         valid = valid && snmpPortValid;
@@ -123,6 +136,8 @@ public class AddEditNetPingDialog extends JDialog {
             editingNetPingWidget.setLineActive("2", line2CheckBox.isSelected());
             editingNetPingWidget.setLineActive("3", line3CheckBox.isSelected());
             editingNetPingWidget.setLineActive("4", line4CheckBox.isSelected());
+
+            editingNetPingWidget.applySettings();
 
             openResult = JOptionPane.OK_OPTION;
             dispose();
@@ -143,6 +158,11 @@ public class AddEditNetPingDialog extends JDialog {
         deviceName.setText("");
         snmpPort.setText("161");
         community.setText("SWITCH");
+
+        line1CheckBox.setSelected(true);
+        line2CheckBox.setSelected(true);
+        line3CheckBox.setSelected(true);
+        line4CheckBox.setSelected(true);
     }
     private void onCancel() {
         openResult = JOptionPane.CANCEL_OPTION;
@@ -161,6 +181,28 @@ public class AddEditNetPingDialog extends JDialog {
 
         onDefault();
     }
+    void setAddingCopy(NetPingWidget newNetPingWidgetIn, NetPingWidget oldNetPingWidgetIn){
+        ipAddress.requestFocus();
+
+        editing = false;
+        editingNetPingWidget = newNetPingWidgetIn;
+        ipAddress.setText(newNetPingWidgetIn.getNotAppliedIpAddress());
+        deviceName.setText(newNetPingWidgetIn.getNotAppliedDeviceName());
+        community.setText(newNetPingWidgetIn.getNotAppliedSnmpCommunity());
+        snmpPort.setText(newNetPingWidgetIn.getNotAppliedSnmpPort());
+
+        line1Name.setText(newNetPingWidgetIn.getLine("1").getLineName());
+        line2Name.setText(newNetPingWidgetIn.getLine("2").getLineName());
+        line3Name.setText(newNetPingWidgetIn.getLine("3").getLineName());
+        line4Name.setText(newNetPingWidgetIn.getLine("4").getLineName());
+
+        line1CheckBox.setSelected(oldNetPingWidgetIn.getLine("1").isActive());
+        line2CheckBox.setSelected(oldNetPingWidgetIn.getLine("2").isActive());
+        line3CheckBox.setSelected(oldNetPingWidgetIn.getLine("3").isActive());
+        line4CheckBox.setSelected(oldNetPingWidgetIn.getLine("4").isActive());
+
+        this.setTitle("Копирование NetPing");
+    }
     void setEditing(NetPingWidget netPingWidgetIn){
         ipAddress.requestFocus();
 
@@ -176,10 +218,10 @@ public class AddEditNetPingDialog extends JDialog {
         line3Name.setText(netPingWidgetIn.getLine("3").getLineName());
         line4Name.setText(netPingWidgetIn.getLine("4").getLineName());
 
-        line1CheckBox.setSelected(netPingWidgetIn.getLine("1").getActive());
-        line2CheckBox.setSelected(netPingWidgetIn.getLine("2").getActive());
-        line3CheckBox.setSelected(netPingWidgetIn.getLine("3").getActive());
-        line4CheckBox.setSelected(netPingWidgetIn.getLine("4").getActive());
+        line1CheckBox.setSelected(netPingWidgetIn.getLine("1").isActive());
+        line2CheckBox.setSelected(netPingWidgetIn.getLine("2").isActive());
+        line3CheckBox.setSelected(netPingWidgetIn.getLine("3").isActive());
+        line4CheckBox.setSelected(netPingWidgetIn.getLine("4").isActive());
 
         this.setTitle("Изменение NetPing");
     }

@@ -17,15 +17,18 @@ import org.snmp4j.util.ThreadPool;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.util.*;
+import java.util.List;
 
 public class MainWindow extends JFrame implements CommandResponder {
     private JLabel appStatus;
     private JPanel netPingGrid;
     private JPanel rootPanel;
     private JButton settingsButton;
-    private GridLayout gridLayout = new GridLayout();
+    private GridBagLayout gridLayout = new GridBagLayout();
 
     private final String appName = "NetPing мониторинг";
     private Logger logger = LogManager.getFormatterLogger("MainWindow");
@@ -43,6 +46,8 @@ public class MainWindow extends JFrame implements CommandResponder {
 
     private SettingsDialog settingsDialog;
     private SettingsLoader settingsLoader;
+
+    private GuiSaver guiSaver = new GuiSaver(this, "MainWindow");
 
     private void initTrayIcon() {
         PopupMenu trayMenu = new PopupMenu();
@@ -64,12 +69,13 @@ public class MainWindow extends JFrame implements CommandResponder {
     }
 
     private void init() {
+
         netPingGrid.setLayout(gridLayout);
 
         MainWindow mainWindowContext = this;
         settingsDialog = new SettingsDialog(this){
             @Override
-            public void applied() {
+            public void appliedAll() {
                 mainWindowContext.setStyle(settingsDialog.getStyle());
                 mainWindowContext.setTrayIconVisible(settingsDialog.getTrayIconVisible());
                 mainWindowContext.setSnmpCommunity(settingsDialog.getSnmpCommunity());
@@ -77,23 +83,25 @@ public class MainWindow extends JFrame implements CommandResponder {
                 mainWindowContext.setRetries(settingsDialog.getRetries());
                 mainWindowContext.setTimeOut(settingsDialog.getTimeOut());
 
-                //добавляем новые
-                Collection<NetPingWidget> toAdd = settingsDialog.getNetPingWidgets();
-                toAdd.removeAll(ipMap.values());
-                for(NetPingWidget netPingWidget: toAdd){
-                    addNetPingWidget(netPingWidget);
-                }
+                settingsLoader.saveSettings(settingsDialog);
+            }
 
-                //удаляем
-                ArrayList<NetPingWidget> toRemove = new ArrayList<>();
-                for(NetPingWidget netPingWidget: ipMap.values()){
-                    toRemove.add(netPingWidget);
-                }
-                toRemove.removeAll(settingsDialog.getNetPingWidgets());
-                for(NetPingWidget netPingWidget: toRemove){
+            @Override
+            public void addedNetPing(NetPingWidget netPingWidgetIn) {
+                addNetPingWidget(netPingWidgetIn);
+                netPingWidgetIn.repaint();
+            }
+
+            @Override
+            public void removedNetPings(List<NetPingWidget> netPingWidgetsIn) {
+                netPingWidgetsIn.forEach(netPingWidget -> {
                     removeNetPingWidget(netPingWidget);
-                }
+                    netPingWidget.repaint();
+                });
+            }
 
+            @Override
+            public void changedNetPing(NetPingWidget netPingWidgetIn) {
                 //обновляем ip-адреса в ipMap
                 ipMap.clear();
                 for(NetPingWidget netPingWidget: settingsDialog.getNetPingWidgets()){
@@ -103,8 +111,6 @@ public class MainWindow extends JFrame implements CommandResponder {
                 for(NetPingWidget netPingWidget: ipMap.values()){
                     netPingWidget.repaint();
                 }
-
-                settingsLoader.saveSettings(settingsDialog);
             }
         };
 
@@ -139,6 +145,17 @@ public class MainWindow extends JFrame implements CommandResponder {
         this.pack();
         this.setVisible(true);
         this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                super.windowClosing(e);
+                guiSaver.save();
+            }
+        });
+
+        guiSaver.saveWindowMaximized(true);
+        guiSaver.load();
 
         this.init();
     }
@@ -188,7 +205,7 @@ public class MainWindow extends JFrame implements CommandResponder {
         trayIcon.displayMessage(appName, "запущен", TrayIcon.MessageType.INFO);
         appStatus.setText(message);
 
-        ipMap.values().forEach(netPingWidget -> netPingWidget.startChecking());
+        ipMap.values().forEach(netPingWidget -> netPingWidget.snmpInitialized());
 
         try {
             this.wait();
@@ -229,9 +246,17 @@ public class MainWindow extends JFrame implements CommandResponder {
         }
     }
 
+    boolean isNetPingExist(String ipAddressIn){
+        return ipMap.containsKey(ipAddressIn);
+    }
+
     //<set>=============================================================================================================
     void setCheckingDelay(Integer checkingDelayIn){
         checkingDelay = checkingDelayIn;
+
+        for(NetPingWidget netPingWidget: ipMap.values()){
+            netPingWidget.setCheckingDelay(checkingDelay);
+        }
     }
     void setTimeOut(Integer timeOutIn){
         timeOut = timeOutIn;
@@ -270,7 +295,11 @@ public class MainWindow extends JFrame implements CommandResponder {
                     UIManager.setLookAndFeel(info.getClassName());
                     SwingUtilities.updateComponentTreeUI(this);
                     settingsDialog.updateStyle();
-                    this.pack();
+
+                    for(NetPingWidget netPingWidget: ipMap.values()){
+                        netPingWidget.updateStyle();
+                    }
+
                     break;
                 }
             }
@@ -279,17 +308,16 @@ public class MainWindow extends JFrame implements CommandResponder {
         }
     }
     public void setGridSize(int columnsIn, int rowsIn){
-        gridLayout.setColumns(columnsIn);
-        gridLayout.setRows(rowsIn);
+//        gridLayout.setColumns(columnsIn);
+//        gridLayout.setRows(rowsIn);
     }
     //</set>============================================================================================================
 
-    void addNetPingWidget(NetPingWidget netPingWidgetIn){
+    private void addNetPingWidget(NetPingWidget netPingWidgetIn){
         ipMap.put(netPingWidgetIn.getIpAddress(), netPingWidgetIn);
         netPingGrid.add(netPingWidgetIn);
         netPingGrid.revalidate();
         netPingGrid.repaint();
-        this.pack();
     }
     void addNetPingWidgets(Collection<NetPingWidget> netPingWidgetsIn){
         for(NetPingWidget netPingWidget: netPingWidgetsIn){
@@ -299,15 +327,13 @@ public class MainWindow extends JFrame implements CommandResponder {
 
         netPingGrid.revalidate();
         netPingGrid.repaint();
-        this.pack();
     }
-    void removeNetPingWidget(NetPingWidget netPingWidgetIn){
+    private void removeNetPingWidget(NetPingWidget netPingWidgetIn){
         netPingWidgetIn.setActive(false);
         ipMap.remove(netPingWidgetIn.getIpAddress());
         netPingGrid.remove(netPingWidgetIn);
         netPingGrid.revalidate();
         netPingGrid.repaint();
-        this.pack();
     }
 
     //<get>=============================================================================================================

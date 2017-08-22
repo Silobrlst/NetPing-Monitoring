@@ -1,7 +1,6 @@
 package netpingmon;
 
 import javax.swing.*;
-import java.awt.*;
 import java.awt.event.*;
 
 public class EditIOLineDialog extends JDialog {
@@ -22,8 +21,10 @@ public class EditIOLineDialog extends JDialog {
 
     private int openResult;
 
-    EditIOLineDialog(AddEditNetPingDialog addEditNetPingDialogIn) {
-        super(addEditNetPingDialogIn, ModalityType.APPLICATION_MODAL);
+    private GuiSaver guiSaver = new GuiSaver(this, "EditIOLineDialog");
+
+    EditIOLineDialog(JDialog parentIn) {
+        super(parentIn, ModalityType.APPLICATION_MODAL);
 
         setContentPane(contentPane);
         setModal(true);
@@ -50,6 +51,17 @@ public class EditIOLineDialog extends JDialog {
         value1MessageButton.addActionListener(e -> editDisplayMessageDialog.open(editingIOLineWidget.getValue1Message()));
 
         this.pack();
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                super.windowClosing(e);
+                guiSaver.save();
+            }
+        });
+
+        guiSaver.saveWindowMaximized(true);
+        guiSaver.load();
     }
 
     private void onOK() {
@@ -64,6 +76,8 @@ public class EditIOLineDialog extends JDialog {
             editingIOLineWidget.setLineName(lineName.getText());
             editingIOLineWidget.setTrapReceiveOID(trapOID.getText());
             editingIOLineWidget.setSnmpGetOID(getOID.getText());
+
+            editingIOLineWidget.applySettings();
 
             openResult = JOptionPane.OK_OPTION;
             dispose();

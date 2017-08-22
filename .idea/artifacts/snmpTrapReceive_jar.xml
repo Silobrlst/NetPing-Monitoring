@@ -1,8 +1,0 @@
-<component name="ArtifactManager">
-  <artifact type="jar" build-on-make="true" name="snmpTrapReceive:jar">
-    <output-path>$PROJECT_DIR$/out/artifacts/snmpTrapReceive_jar</output-path>
-    <root id="archive" name="snmpTrapReceive.jar">
-      <element id="module-output" name="NetPing-Monitoring" />
-    </root>
-  </artifact>
-</component>

@@ -2,7 +2,7 @@ package netpingmon;
 
 import java.util.TimerTask;
 
-public class AutoChecking {
+class AutoChecking {
     private Thread thread;
     private Runnable checkTask;
     private java.util.Timer timer;
