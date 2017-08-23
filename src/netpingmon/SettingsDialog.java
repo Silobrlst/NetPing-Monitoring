@@ -26,6 +26,8 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
     private JTextField retries;
     private JTextField community;
     private JButton copyButton;
+    private JTextField gridColumns;
+    private JTextField gridRows;
 
     private AddEditNetPingDialog addEditNetPingDialog;
     private MainWindow mainWindow;
@@ -86,6 +88,9 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
 
         this.pack();
 
+        guiSaver.saveWindowMaximized(true);
+        guiSaver.load();
+
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -93,9 +98,6 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
                 guiSaver.save();
             }
         });
-
-        guiSaver.saveWindowMaximized(true);
-        guiSaver.load();
     }
 
     //<on>==============================================================================================================
@@ -198,6 +200,8 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
         timeout.setText(Integer.toString(mainWindow.getTimeOut()));
         checkingDelay.setText(Integer.toString(mainWindow.getCheckingDelay()));
         retries.setText(Integer.toString(mainWindow.getRetries()));
+        gridColumns.setText(Integer.toString(mainWindow.getGridColumns()));
+        gridRows.setText(Integer.toString(mainWindow.getGridRows()));
 
         validationStatus.setText("");
     }
@@ -225,12 +229,14 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
     private boolean applyAll(){
         String intRegex = "^[1-9]\\d*";
 
+        boolean gridColumnsValid = gridColumns.getText().matches(intRegex);
+        boolean gridRowsValid = gridRows.getText().matches(intRegex);
         boolean snmpPortValid = snmpPort.getText().matches(intRegex);
         boolean snmpTrapPortValid = snmpTrapPort.getText().matches(intRegex);
         boolean timeoutValid = timeout.getText().matches(intRegex);
         boolean checkingDelayValid = checkingDelay.getText().matches(intRegex);
         boolean retriesValid = retries.getText().matches(intRegex);
-        boolean valid = retriesValid && timeoutValid && checkingDelayValid && snmpPortValid && snmpTrapPortValid;
+        boolean valid = gridColumnsValid && gridRowsValid && retriesValid && timeoutValid && checkingDelayValid && snmpPortValid && snmpTrapPortValid;
 
         if(valid){
             validationStatus.setText("");
@@ -245,7 +251,11 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
 
             return true;
         }else{
-            if(!snmpPortValid){
+            if(!gridColumnsValid){
+                validationStatus.setText("неправильное количество столбцов плитки");
+            }else if(!gridRowsValid){
+                validationStatus.setText("неправильное количество строк плитки");
+            }else if(!snmpPortValid){
                 validationStatus.setText("неправильный SNMP-порт");
             }else if(!snmpTrapPortValid){
                 validationStatus.setText("неправильный порт приема SNMP-ловушек");
@@ -278,19 +288,19 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
     String getSnmpTrapPort(){
         return snmpTrapPort.getText();
     }
-    Integer getSnmpPort(){
+    int getSnmpPort(){
         return Integer.parseInt(snmpPort.getText());
     }
     String getSnmpCommunity(){
         return community.getText();
     }
-    Integer getTimeOut(){
+    int getTimeOut(){
         return Integer.parseInt(timeout.getText());
     }
-    Integer getCheckingDelay(){
+    int getCheckingDelay(){
         return Integer.parseInt(checkingDelay.getText());
     }
-    Integer getRetries(){
+    int getRetries(){
         return Integer.parseInt(retries.getText());
     }
     String getStyle(){
@@ -298,6 +308,12 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
     }
     boolean getTrayIconVisible(){
         return trayIcon.isSelected();
+    }
+    int getGridColumns(){
+        return Integer.valueOf(gridColumns.getText());
+    }
+    int getGridRows(){
+        return Integer.valueOf(gridRows.getText());
     }
     Collection<NetPingWidget> getNetPingWidgets(){
         ArrayList<NetPingWidget> netPingWidgets = new ArrayList<>();

@@ -19,6 +19,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.List;
@@ -28,26 +29,29 @@ public class MainWindow extends JFrame implements CommandResponder {
     private JPanel netPingGrid;
     private JPanel rootPanel;
     private JButton settingsButton;
-    private GridBagLayout gridLayout = new GridBagLayout();
+    private JButton logsButton;
+    private GridLayout gridLayout = new GridLayout();
 
     private final String appName = "NetPing мониторинг";
     private Logger logger = LogManager.getFormatterLogger("MainWindow");
     private Snmp snmp = null;
     private TrayIcon trayIcon;
     private Map<String, NetPingWidget> ipMap = new HashMap<>();
-    private boolean trayIconVisible = false;
+    private boolean trayIconVisible = DefaultSettings.trayIcon;
 
     private Integer receiveTrapsPort;
     private Integer snmpPort;
-    private String community = "SWITCH";
-    private Integer checkingDelay = 60;
-    private Integer retries = 4;
-    private Integer timeOut = 3;
+    private String community = DefaultSettings.snmpCommunity;
+    private Integer checkingDelay = DefaultSettings.checkingDelay;
+    private Integer retries = DefaultSettings.retries;
+    private Integer timeOut = DefaultSettings.timeOut;
 
     private SettingsDialog settingsDialog;
     private SettingsLoader settingsLoader;
 
     private GuiSaver guiSaver = new GuiSaver(this, "MainWindow");
+
+    private LogsWindow logsWindow = new LogsWindow();
 
     private void initTrayIcon() {
         PopupMenu trayMenu = new PopupMenu();
@@ -82,6 +86,7 @@ public class MainWindow extends JFrame implements CommandResponder {
                 mainWindowContext.setCheckingDelay(settingsDialog.getCheckingDelay());
                 mainWindowContext.setRetries(settingsDialog.getRetries());
                 mainWindowContext.setTimeOut(settingsDialog.getTimeOut());
+                mainWindowContext.setGridSize(settingsDialog.getGridColumns(), settingsDialog.getGridRows());
 
                 settingsLoader.saveSettings(settingsDialog);
             }
@@ -141,10 +146,15 @@ public class MainWindow extends JFrame implements CommandResponder {
 
         initTrayIcon();
 
+        logsButton.addActionListener(e -> logsWindow.open());
+
         this.getContentPane().add(rootPanel);
-        this.pack();
         this.setVisible(true);
         this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        this.pack();
+
+        guiSaver.saveWindowMaximized(true);
+        guiSaver.load();
 
         addWindowListener(new WindowAdapter() {
             @Override
@@ -154,13 +164,10 @@ public class MainWindow extends JFrame implements CommandResponder {
             }
         });
 
-        guiSaver.saveWindowMaximized(true);
-        guiSaver.load();
-
         this.init();
     }
 
-    private void lineReceiveTrap(IOLineWidget ioLineWidgetIn, PDU pduIn){
+    private void lineReceiveTrap(IoLineWidget ioLineWidgetIn, PDU pduIn){
         if (pduIn.getVariable(ioLineWidgetIn.getTrapReceiveOID()) != null) {
             int opened = pduIn.getVariable(ioLineWidgetIn.getTrapReceiveOID()).toInt();
 
@@ -295,6 +302,7 @@ public class MainWindow extends JFrame implements CommandResponder {
                     UIManager.setLookAndFeel(info.getClassName());
                     SwingUtilities.updateComponentTreeUI(this);
                     settingsDialog.updateStyle();
+                    logsWindow.updateStyle();
 
                     for(NetPingWidget netPingWidget: ipMap.values()){
                         netPingWidget.updateStyle();
@@ -307,9 +315,9 @@ public class MainWindow extends JFrame implements CommandResponder {
             // If Nimbus is not available, you can set the GUI to another look and feel.
         }
     }
-    public void setGridSize(int columnsIn, int rowsIn){
-//        gridLayout.setColumns(columnsIn);
-//        gridLayout.setRows(rowsIn);
+    void setGridSize(int columnsIn, int rowsIn){
+        gridLayout.setColumns(columnsIn);
+        gridLayout.setRows(rowsIn);
     }
     //</set>============================================================================================================
 
@@ -347,6 +355,8 @@ public class MainWindow extends JFrame implements CommandResponder {
         return receiveTrapsPort;
     }
     Integer getTimeOut(){
+        revalidate();
+        repaint();
         return timeOut;
     }
     Integer getRetries(){
@@ -373,8 +383,21 @@ public class MainWindow extends JFrame implements CommandResponder {
     boolean getTrayIconVisible(){
         return trayIconVisible;
     }
+    int getGridColumns(){
+        return gridLayout.getColumns();
+    }
+    int getGridRows(){
+        return gridLayout.getRows();
+    }
     Collection<NetPingWidget> getNetPingWidgets(){
         return ipMap.values();
     }
     //</get>============================================================================================================
+
+    void saveOnlyNetPing(NetPingWidget netPingWidgetIn){
+        settingsLoader.saveOnlyNetPing(netPingWidgetIn);
+    }
+    void saveOnlyIoLine(NetPingWidget netPingWidgetIn, IoLineWidget ioLineWidgetIn){
+        settingsLoader.saveOnlyIoLine(netPingWidgetIn, ioLineWidgetIn);
+    }
 }

@@ -27,11 +27,12 @@ public class AddEditNetPingDialog extends JDialog {
     private JLabel validation;
     private JButton connectedMessageButton;
     private JButton disconnectedMessageButton;
+    private JComboBox gridType;
 
     private boolean editing; //режим редактирования - true, режим добавления - false
     private NetPingWidget editingNetPingWidget;
 
-    private EditIOLineDialog editIOLineDialog;
+    private EditIoLineDialog editIoLineDialog;
 
     private int openResult;
 
@@ -67,38 +68,41 @@ public class AddEditNetPingDialog extends JDialog {
         // call onCancel() on ESCAPE
         contentPane.registerKeyboardAction(e -> onCancel(), KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
 
-        editIOLineDialog = new EditIOLineDialog(this);
+        editIoLineDialog = new EditIoLineDialog(this);
 
         connectedMessageButton.addActionListener(e -> editDisplayMessageDialog.open(editingNetPingWidget.getConnectedMessage()));
         disconnectedMessageButton.addActionListener(e -> editDisplayMessageDialog.open(editingNetPingWidget.getDisconnectedMessage()));
 
         AddEditNetPingDialog addEditNetPingDialog = this;
         line1SettingsButton.addActionListener(e -> {
-            if(editIOLineDialog.open(editingNetPingWidget.getLine("1"), "1") == JOptionPane.OK_OPTION){
+            if(editIoLineDialog.open(editingNetPingWidget.getLine("1"), "1") == JOptionPane.OK_OPTION){
                 line1Name.setText(editingNetPingWidget.getLine("1").getNotAppliedLineName());
                 addEditNetPingDialog.pack();
             }
         });
         line2SettingsButton.addActionListener(e -> {
-            if(editIOLineDialog.open(editingNetPingWidget.getLine("2"), "2") == JOptionPane.OK_OPTION){
+            if(editIoLineDialog.open(editingNetPingWidget.getLine("2"), "2") == JOptionPane.OK_OPTION){
                 line2Name.setText(editingNetPingWidget.getLine("2").getNotAppliedLineName());
                 addEditNetPingDialog.pack();
             }
         });
         line3SettingsButton.addActionListener(e -> {
-            if(editIOLineDialog.open(editingNetPingWidget.getLine("3"), "3") == JOptionPane.OK_OPTION){
+            if(editIoLineDialog.open(editingNetPingWidget.getLine("3"), "3") == JOptionPane.OK_OPTION){
                 line3Name.setText(editingNetPingWidget.getLine("3").getNotAppliedLineName());
                 addEditNetPingDialog.pack();
             }
         });
         line4SettingsButton.addActionListener(e -> {
-            if(editIOLineDialog.open(editingNetPingWidget.getLine("4"), "4") == JOptionPane.OK_OPTION){
+            if(editIoLineDialog.open(editingNetPingWidget.getLine("4"), "4") == JOptionPane.OK_OPTION){
                 line4Name.setText(editingNetPingWidget.getLine("4").getNotAppliedLineName());
                 addEditNetPingDialog.pack();
             }
         });
 
         this.pack();
+
+        guiSaver.saveWindowMaximized(true);
+        guiSaver.load();
 
         addWindowListener(new WindowAdapter() {
             @Override
@@ -107,9 +111,6 @@ public class AddEditNetPingDialog extends JDialog {
                 guiSaver.save();
             }
         });
-
-        guiSaver.saveWindowMaximized(true);
-        guiSaver.load();
     }
 
     //<on>==============================================================================================================
@@ -136,6 +137,8 @@ public class AddEditNetPingDialog extends JDialog {
             editingNetPingWidget.setLineActive("2", line2CheckBox.isSelected());
             editingNetPingWidget.setLineActive("3", line3CheckBox.isSelected());
             editingNetPingWidget.setLineActive("4", line4CheckBox.isSelected());
+
+            editingNetPingWidget.setGridType((String)gridType.getSelectedItem());
 
             editingNetPingWidget.applySettings();
 
@@ -208,27 +211,29 @@ public class AddEditNetPingDialog extends JDialog {
 
         editing = true;
         editingNetPingWidget = netPingWidgetIn;
-        ipAddress.setText(netPingWidgetIn.getNotAppliedIpAddress());
-        deviceName.setText(netPingWidgetIn.getNotAppliedDeviceName());
-        community.setText(netPingWidgetIn.getNotAppliedSnmpCommunity());
-        snmpPort.setText(netPingWidgetIn.getNotAppliedSnmpPort());
+        ipAddress.setText(editingNetPingWidget.getNotAppliedIpAddress());
+        deviceName.setText(editingNetPingWidget.getNotAppliedDeviceName());
+        community.setText(editingNetPingWidget.getNotAppliedSnmpCommunity());
+        snmpPort.setText(editingNetPingWidget.getNotAppliedSnmpPort());
 
-        line1Name.setText(netPingWidgetIn.getLine("1").getLineName());
-        line2Name.setText(netPingWidgetIn.getLine("2").getLineName());
-        line3Name.setText(netPingWidgetIn.getLine("3").getLineName());
-        line4Name.setText(netPingWidgetIn.getLine("4").getLineName());
+        gridType.setSelectedItem(editingNetPingWidget.getGridType());
 
-        line1CheckBox.setSelected(netPingWidgetIn.getLine("1").isActive());
-        line2CheckBox.setSelected(netPingWidgetIn.getLine("2").isActive());
-        line3CheckBox.setSelected(netPingWidgetIn.getLine("3").isActive());
-        line4CheckBox.setSelected(netPingWidgetIn.getLine("4").isActive());
+        line1Name.setText(editingNetPingWidget.getLine("1").getLineName());
+        line2Name.setText(editingNetPingWidget.getLine("2").getLineName());
+        line3Name.setText(editingNetPingWidget.getLine("3").getLineName());
+        line4Name.setText(editingNetPingWidget.getLine("4").getLineName());
+
+        line1CheckBox.setSelected(editingNetPingWidget.getLine("1").isActive());
+        line2CheckBox.setSelected(editingNetPingWidget.getLine("2").isActive());
+        line3CheckBox.setSelected(editingNetPingWidget.getLine("3").isActive());
+        line4CheckBox.setSelected(editingNetPingWidget.getLine("4").isActive());
 
         this.setTitle("Изменение NetPing");
     }
 
     void updateStyle(){
         SwingUtilities.updateComponentTreeUI(this);
-        editIOLineDialog.updateStyle();
+        editIoLineDialog.updateStyle();
         editDisplayMessageDialog.updateStyle();
         this.pack();
     }

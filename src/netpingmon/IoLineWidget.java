@@ -10,19 +10,15 @@ import org.snmp4j.smi.UdpAddress;
 import org.snmp4j.smi.VariableBinding;
 
 import javax.swing.*;
-import javax.swing.border.BevelBorder;
 import javax.swing.border.Border;
 import javax.swing.border.EtchedBorder;
-import javax.swing.plaf.basic.BasicBorders;
-import javax.swing.plaf.metal.MetalBorders;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.IOException;
-import java.util.concurrent.Callable;
 
-public class IOLineWidget extends JPanel {
+public class IoLineWidget extends JPanel {
     private JLabel lineName;
     private JLabel messageText;
     private JPanel rootPanel;
@@ -51,13 +47,13 @@ public class IOLineWidget extends JPanel {
     private int currentState;
     private boolean active;
 
-    JPopupMenu popup = new JPopupMenu();
+    private JPopupMenu popup = new JPopupMenu();
 
-    private EditIOLineDialog editIOLineDialog = new EditIOLineDialog(null);
+    private EditIoLineDialog editIoLineDialog = new EditIoLineDialog(null);
 
     private static final String messageToolTipText = "<html>Состояние линии:<Br>";
 
-    IOLineWidget(NetPingWidget netPingWidgetIn, String lineNumberIn){
+    IoLineWidget(NetPingWidget netPingWidgetIn, String lineNumberIn){
         netPingWidget = netPingWidgetIn;
         lineNumber = lineNumberIn;
         value0Message = new DisplayMessage();
@@ -65,7 +61,7 @@ public class IOLineWidget extends JPanel {
 
         switch(lineNumberIn){
             case "1":
-                snmpGetOIDApply = "1.3.6.1.4.1.25728.8900.1.1.2.1";
+                snmpGetOIDApply = DefaultSettings.snmpGetLine1Oid;
                 break;
             case "2":
                 snmpGetOIDApply = "1.3.6.1.4.1.25728.8900.1.1.2.2";
@@ -189,10 +185,14 @@ public class IOLineWidget extends JPanel {
         popup.add(checkItem);
         popup.add(editItem);
 
-        IOLineWidget context = this;
+        IoLineWidget context = this;
         checkItem.addActionListener(e -> new Thread(checkFunction).start());
         editItem.addActionListener(e -> {
-            editIOLineDialog.open(context, getLineNumber());
+            rootPanel.setBorder(etchedBorder);
+            if(editIoLineDialog.open(context, getLineNumber()) == JOptionPane.OK_OPTION){
+                netPingWidget.getMainWindow().saveOnlyIoLine(netPingWidget, context);
+            }
+            rootPanel.setBorder(originalBorder);
             context.repaint();
         });
         //</контекстное меню>===========================================================================================
@@ -233,6 +233,10 @@ public class IOLineWidget extends JPanel {
     String getLineNumber(){
         return lineNumber;
     }
+
+    private String getLoggingName(){
+        return netPingWidget.getLoggingName() + ", линия " + getLineNumber() + " \"" + lineName.getText() + "\"";
+    }
     //</get>============================================================================================================
 
     //<set>=============================================================================================================
@@ -264,10 +268,16 @@ public class IOLineWidget extends JPanel {
     void set0(){
         applyDisplayMessage(value0Message);
         currentState = 0;
+
+        netPingWidget.getMainWindow().getLogger().info(changedStateLog("0 \"" + value0Message.getMessageText() + "\""));
+        netPingWidget.getMainWindow().getTrayIcon().displayMessage("изменение состояния линии", getLoggingName() + "\n\"" + value0Message.getMessageText() + "\"", TrayIcon.MessageType.INFO);
     }
     void set1(){
         applyDisplayMessage(value1Message);
         currentState = 1;
+
+        netPingWidget.getMainWindow().getLogger().info(changedStateLog("1 \"" + value1Message.getMessageText() + "\""));
+        netPingWidget.getMainWindow().getTrayIcon().displayMessage("изменение состояния линии", getLoggingName() + "\n\"" + value1Message.getMessageText() + "\"", TrayIcon.MessageType.INFO);
     }
     void setError(String commentIn){
         rootPanel.setBackground(defaultBackgroundColor);
@@ -275,10 +285,17 @@ public class IOLineWidget extends JPanel {
         messageText.setToolTipText(messageToolTipText + commentIn + "</html>");
         messageText.setForeground(Color.BLACK);
         lineName.setForeground(Color.BLACK);
+
+//        netPingWidget.getMainWindow().getLogger().info(changedStateLog("\"ошибка\""));
+//        netPingWidget.getMainWindow().getTrayIcon().displayMessage("изменение состояния линии", getLoggingName() + "\n\"ошибка\"", TrayIcon.MessageType.INFO);
     }
     //</set>============================================================================================================
 
-    void copyTo(IOLineWidget ioLineWidgetIn){
+    private String changedStateLog(String stateIn){
+        return getLoggingName() + ": изменение состояния на " + stateIn;
+    }
+
+    void copyTo(IoLineWidget ioLineWidgetIn){
         ioLineWidgetIn.setLineName(getLineName());
         ioLineWidgetIn.setSnmpGetOID(getSnmpGetOID().toString());
         ioLineWidgetIn.setTrapReceiveOID(getTrapReceiveOID().toString());
@@ -338,10 +355,10 @@ public class IOLineWidget extends JPanel {
 
     void updateStyle(){
         SwingUtilities.updateComponentTreeUI(this);
-        editIOLineDialog.updateStyle();
+        editIoLineDialog.updateStyle();
     }
 
-    class PopupListener extends MouseAdapter {
+    private class PopupListener extends MouseAdapter {
         public void mousePressed(MouseEvent e) {
             maybeShowPopup(e);
         }

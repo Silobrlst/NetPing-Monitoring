@@ -33,6 +33,7 @@ public class SettingsLoader {
     private static final String value1MessageJsonName = "value1Message";
     private static final String connectedMessageJsonName = "connectedMessage";
     private static final String disconnectedMessageJsonName = "disconnectedMessage";
+    private static final String linesGridTypeJsonName = "linesGridType";
 
     private static final File settingsFile = new File("settings.json");
 
@@ -53,62 +54,45 @@ public class SettingsLoader {
         mainWindow.setCheckingDelay(settingsJSON.getInt(checkingDelayJsonName));
         mainWindow.setRetries(settingsJSON.getInt(retriesJsonName));
         mainWindow.setTimeOut(settingsJSON.getInt(timeOutJsonName));
+        mainWindow.setGridSize(settingsJSON.getInt(gridColumnsJsonName), settingsJSON.getInt(gridRowsJsonName));
 
         mainWindow.addNetPingWidgets(loadNetPings(mainWindow, settingsJSON.getJSONObject(netPingsJsonName)));
         mainWindow.startListen();
     }
 
     //<validate settings>===============================================================================================
-    private static void validateDisplayMessage(JSONObject displayMessageJSONIn){
-        if(!displayMessageJSONIn.has(textColorJsonName)){
-            displayMessageJSONIn.put(textColorJsonName, 0xffffff);
-        }
-        if(!displayMessageJSONIn.has(backgroundColorJsonName)){
-            displayMessageJSONIn.put(backgroundColorJsonName, 0);
-        }
-        if(!displayMessageJSONIn.has(messageTextJsonName)){
-            displayMessageJSONIn.put(messageTextJsonName, "");
+    private static void validateJsonKey(JSONObject jsonIn, String nameIn, Object defaultIn){
+        if (!jsonIn.has(nameIn)) {
+            jsonIn.put(nameIn, defaultIn);
         }
     }
+    private static void validateDisplayMessage(JSONObject displayMessageJSONIn){
+        validateJsonKey(displayMessageJSONIn, textColorJsonName, 0xffffff);
+        validateJsonKey(displayMessageJSONIn, backgroundColorJsonName, 0);
+        validateJsonKey(displayMessageJSONIn, messageTextJsonName, "");
+    }
     private static void validateIOLine(JSONObject ioLineJSONIn){
-        if(!ioLineJSONIn.has(nameJsonName)){
-            ioLineJSONIn.put(nameJsonName, "");
-        }
-        if(!ioLineJSONIn.has(lineActiveJsonName)){
-            ioLineJSONIn.put(lineActiveJsonName, true);
-        }
-        if(!ioLineJSONIn.has(value0MessageJsonName)){
-            ioLineJSONIn.put(value0MessageJsonName, new JSONObject());
-        }
-        if(!ioLineJSONIn.has(value1MessageJsonName)){
-            ioLineJSONIn.put(value1MessageJsonName, new JSONObject());
-        }
+        validateJsonKey(ioLineJSONIn, nameJsonName, "");
+        validateJsonKey(ioLineJSONIn, getOID, DefaultSettings.snmpGetLine1Oid);
+        validateJsonKey(ioLineJSONIn, trapOID, DefaultSettings.snmpTrapPort);
+        validateJsonKey(ioLineJSONIn, lineActiveJsonName, true);
+        validateJsonKey(ioLineJSONIn, value0MessageJsonName, new JSONObject());
+        validateJsonKey(ioLineJSONIn, value1MessageJsonName, new JSONObject());
 
         validateDisplayMessage(ioLineJSONIn.getJSONObject(value0MessageJsonName));
         validateDisplayMessage(ioLineJSONIn.getJSONObject(value1MessageJsonName));
     }
     private static void validateNetPing(JSONObject netPingJSONIn){
-        if(!netPingJSONIn.has(nameJsonName)){
-            netPingJSONIn.put(nameJsonName, "");
-        }
-        if(!netPingJSONIn.has(connectedMessageJsonName)){
-            netPingJSONIn.put(connectedMessageJsonName, new JSONObject());
-        }
-        if(!netPingJSONIn.has(disconnectedMessageJsonName)){
-            netPingJSONIn.put(disconnectedMessageJsonName, new JSONObject());
-        }
-        if(!netPingJSONIn.has(line1JsonName)){
-            netPingJSONIn.put(line1JsonName, new JSONObject());
-        }
-        if(!netPingJSONIn.has(line2JsonName)){
-            netPingJSONIn.put(line2JsonName, new JSONObject());
-        }
-        if(!netPingJSONIn.has(line3JsonName)){
-            netPingJSONIn.put(line3JsonName, new JSONObject());
-        }
-        if(!netPingJSONIn.has(line4JsonName)){
-            netPingJSONIn.put(line4JsonName, new JSONObject());
-        }
+        validateJsonKey(netPingJSONIn, nameJsonName, "");
+        validateJsonKey(netPingJSONIn, snmpPortJsonName, DefaultSettings.snmpPort);
+        validateJsonKey(netPingJSONIn, snmpCommunityJsonName, DefaultSettings.snmpCommunity);
+        validateJsonKey(netPingJSONIn, connectedMessageJsonName, new JSONObject());
+        validateJsonKey(netPingJSONIn, disconnectedMessageJsonName, new JSONObject());
+        validateJsonKey(netPingJSONIn, linesGridTypeJsonName, DefaultSettings.linesGridType);
+        validateJsonKey(netPingJSONIn, line1JsonName, new JSONObject());
+        validateJsonKey(netPingJSONIn, line2JsonName, new JSONObject());
+        validateJsonKey(netPingJSONIn, line3JsonName, new JSONObject());
+        validateJsonKey(netPingJSONIn, line4JsonName, new JSONObject());
 
         validateDisplayMessage(netPingJSONIn.getJSONObject(connectedMessageJsonName));
         validateDisplayMessage(netPingJSONIn.getJSONObject(disconnectedMessageJsonName));
@@ -119,39 +103,17 @@ public class SettingsLoader {
         validateIOLine(netPingJSONIn.getJSONObject(line4JsonName));
     }
     private static void validateSettings(JSONObject settingsJSONIn){
-        if(!settingsJSONIn.has(trayIconJsonName)){
-            settingsJSONIn.put(trayIconJsonName, false);
-        }
-        if(!settingsJSONIn.has(styleJsonName)){
-            settingsJSONIn.put(styleJsonName, "Metal");
-        }
-        if(!settingsJSONIn.has(gridColumnsJsonName)){
-            settingsJSONIn.put(gridColumnsJsonName, "4");
-        }
-        if(!settingsJSONIn.has(gridRowsJsonName)){
-            settingsJSONIn.put(gridRowsJsonName, "6");
-        }
-        if(!settingsJSONIn.has(checkingDelayJsonName)){
-            settingsJSONIn.put(checkingDelayJsonName, "60");
-        }
-        if(!settingsJSONIn.has(timeOutJsonName)){
-            settingsJSONIn.put(timeOutJsonName, "3");
-        }
-        if(!settingsJSONIn.has(retriesJsonName)){
-            settingsJSONIn.put(retriesJsonName, "4");
-        }
-        if(!settingsJSONIn.has(netPingsJsonName)){
-            settingsJSONIn.put(netPingsJsonName, new JSONObject());
-        }
-        if(!settingsJSONIn.has(snmpPortJsonName)){
-            settingsJSONIn.put(snmpPortJsonName, "64123");
-        }
-        if(!settingsJSONIn.has(snmpTrapPortJsonName)){
-            settingsJSONIn.put(snmpTrapPortJsonName, "162");
-        }
-        if(!settingsJSONIn.has(snmpCommunityJsonName)){
-            settingsJSONIn.put(snmpCommunityJsonName, "SWITCH");
-        }
+        validateJsonKey(settingsJSONIn, trayIconJsonName, DefaultSettings.trayIcon);
+        validateJsonKey(settingsJSONIn, styleJsonName, DefaultSettings.style);
+        validateJsonKey(settingsJSONIn, gridColumnsJsonName, DefaultSettings.gridNetPingsColumns);
+        validateJsonKey(settingsJSONIn, gridRowsJsonName, DefaultSettings.gridNetPingsRows);
+        validateJsonKey(settingsJSONIn, checkingDelayJsonName, DefaultSettings.checkingDelay);
+        validateJsonKey(settingsJSONIn, timeOutJsonName, DefaultSettings.timeOut);
+        validateJsonKey(settingsJSONIn, retriesJsonName, DefaultSettings.retries);
+        validateJsonKey(settingsJSONIn, netPingsJsonName, new JSONObject());
+        validateJsonKey(settingsJSONIn, snmpPortJsonName, DefaultSettings.snmpPort);
+        validateJsonKey(settingsJSONIn, snmpTrapPortJsonName, DefaultSettings.snmpTrapPort);
+        validateJsonKey(settingsJSONIn, snmpCommunityJsonName, DefaultSettings.snmpCommunity);
 
         JSONObject netPingsJSON = settingsJSONIn.getJSONObject(netPingsJsonName);
         for(String ip: netPingsJSON.keySet()){
@@ -174,7 +136,7 @@ public class SettingsLoader {
         displayMessageIn.applySettings();
     }
     private static void loadIOLine(NetPingWidget netPingWidgetIn, String lineNumberIn, JSONObject ioLineJSONIn){
-        IOLineWidget ioLineWidget = netPingWidgetIn.getLine(lineNumberIn);
+        IoLineWidget ioLineWidget = netPingWidgetIn.getLine(lineNumberIn);
         ioLineWidget.setLineName(ioLineJSONIn.getString(nameJsonName));
         ioLineWidget.setSnmpGetOID(ioLineJSONIn.getString(getOID));
         ioLineWidget.setTrapReceiveOID(ioLineJSONIn.getString(trapOID));
@@ -192,6 +154,7 @@ public class SettingsLoader {
         netPingWidget.setDeviceName(netPingJsonIn.getString(nameJsonName));
         netPingWidget.setSnmpCommunity(netPingJsonIn.getString(snmpCommunityJsonName));
         netPingWidget.setSnmpPort(netPingJsonIn.getString(snmpPortJsonName));
+        netPingWidget.setGridType(netPingJsonIn.getString(linesGridTypeJsonName));
 
         loadDisplayMessage(netPingWidget.getConnectedMessage(), netPingJsonIn.getJSONObject(connectedMessageJsonName));
         loadDisplayMessage(netPingWidget.getDisconnectedMessage(), netPingJsonIn.getJSONObject(disconnectedMessageJsonName));
@@ -221,6 +184,8 @@ public class SettingsLoader {
         settingsJSON.put(checkingDelayJsonName, settingsDialogIn.getCheckingDelay());
         settingsJSON.put(retriesJsonName, settingsDialogIn.getRetries());
         settingsJSON.put(timeOutJsonName, settingsDialogIn.getTimeOut());
+        settingsJSON.put(gridColumnsJsonName, settingsDialogIn.getGridColumns());
+        settingsJSON.put(gridRowsJsonName, settingsDialogIn.getGridRows());
         saveNetPings(settingsDialogIn.getNetPingWidgets(), settingsJSON);
 
         JsonLoader.saveJSON(settingsFile, settingsJSON);
@@ -238,6 +203,7 @@ public class SettingsLoader {
         netPingJSON.put(nameJsonName, netPingWidgetIn.getDeviceName());
         netPingJSON.put(snmpCommunityJsonName, netPingWidgetIn.getSnmpCommunity());
         netPingJSON.put(snmpPortJsonName, netPingWidgetIn.getSnmpPort());
+        netPingJSON.put(linesGridTypeJsonName, netPingWidgetIn.getGridType());
 
         JSONObject connectedMessageJson = new JSONObject();
         saveDisplayMessage(netPingWidgetIn.getConnectedMessage(), connectedMessageJson);
@@ -247,12 +213,12 @@ public class SettingsLoader {
         saveDisplayMessage(netPingWidgetIn.getDisconnectedMessage(), disconnectedMessageJson);
         netPingJSON.put(disconnectedMessageJsonName, disconnectedMessageJson);
 
-        saveNetPingIOLine(netPingWidgetIn, "1", netPingJSON);
-        saveNetPingIOLine(netPingWidgetIn, "2", netPingJSON);
-        saveNetPingIOLine(netPingWidgetIn, "3", netPingJSON);
-        saveNetPingIOLine(netPingWidgetIn, "4", netPingJSON);
+        saveIoLine(netPingWidgetIn, "1", netPingJSON);
+        saveIoLine(netPingWidgetIn, "2", netPingJSON);
+        saveIoLine(netPingWidgetIn, "3", netPingJSON);
+        saveIoLine(netPingWidgetIn, "4", netPingJSON);
     }
-    private void saveNetPingIOLine(NetPingWidget netPingWidgetIn, String lineNumberIn, JSONObject netPingJSON){
+    private void saveIoLine(NetPingWidget netPingWidgetIn, String lineNumberIn, JSONObject netPingJSON){
         JSONObject lineJSON;
 
         switch(lineNumberIn){
@@ -272,7 +238,7 @@ public class SettingsLoader {
                 return;
         }
 
-        IOLineWidget ioLineWidget = netPingWidgetIn.getLine(lineNumberIn);
+        IoLineWidget ioLineWidget = netPingWidgetIn.getLine(lineNumberIn);
         lineJSON.put(nameJsonName, ioLineWidget.getLineName());
         lineJSON.put(getOID, ioLineWidget.getSnmpGetOID());
         lineJSON.put(trapOID, ioLineWidget.getTrapReceiveOID());
@@ -290,6 +256,22 @@ public class SettingsLoader {
         displayMessageJsonIn.put(messageTextJsonName, displayMessageIn.getMessageText());
         displayMessageJsonIn.put(textColorJsonName, displayMessageIn.getTextColor().getRGB());
         displayMessageJsonIn.put(backgroundColorJsonName, displayMessageIn.getBackgroundColor().getRGB());
+    }
+
+    void saveOnlyNetPing(NetPingWidget netPingWidgetIn){
+        JSONObject settingsJson = JsonLoader.loadJSON(settingsFile);
+        validateSettings(settingsJson);
+        validateJsonKey(settingsJson.getJSONObject(netPingsJsonName), netPingWidgetIn.getIpAddress(), new JSONObject());
+        saveNetPing(netPingWidgetIn, settingsJson.getJSONObject(netPingsJsonName));
+        JsonLoader.saveJSON(settingsFile, settingsJson);
+    }
+    void saveOnlyIoLine(NetPingWidget netPingWidgetIn, IoLineWidget ioLineWidgetIn){
+        JSONObject settingsJson = JsonLoader.loadJSON(settingsFile);
+        validateSettings(settingsJson);
+
+        JSONObject netPingJson = settingsJson.getJSONObject(netPingsJsonName).getJSONObject(netPingWidgetIn.getDeviceName());
+        saveIoLine(netPingWidgetIn, ioLineWidgetIn.getLineNumber(), netPingJson);
+        JsonLoader.saveJSON(settingsFile, settingsJson);
     }
     //</save settings>==================================================================================================
 }

@@ -3,7 +3,7 @@ package netpingmon;
 import javax.swing.*;
 import java.awt.event.*;
 
-public class EditIOLineDialog extends JDialog {
+public class EditIoLineDialog extends JDialog {
     private JPanel contentPane;
     private JButton buttonOK;
     private JButton buttonCancel;
@@ -15,15 +15,15 @@ public class EditIOLineDialog extends JDialog {
     private JButton value0MessageButton;
     private JButton value1MessageButton;
 
-    private IOLineWidget editingIOLineWidget;
+    private IoLineWidget editingIoLineWidget;
 
     private EditDisplayMessageDialog editDisplayMessageDialog = new EditDisplayMessageDialog(this);
 
     private int openResult;
 
-    private GuiSaver guiSaver = new GuiSaver(this, "EditIOLineDialog");
+    private GuiSaver guiSaver = new GuiSaver(this, "EditIoLineDialog");
 
-    EditIOLineDialog(JDialog parentIn) {
+    EditIoLineDialog(JDialog parentIn) {
         super(parentIn, ModalityType.APPLICATION_MODAL);
 
         setContentPane(contentPane);
@@ -47,10 +47,13 @@ public class EditIOLineDialog extends JDialog {
         // call onCancel() on ESCAPE
         contentPane.registerKeyboardAction(e -> onCancel(), KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
 
-        value0MessageButton.addActionListener(e -> editDisplayMessageDialog.open(editingIOLineWidget.getValue0Message()));
-        value1MessageButton.addActionListener(e -> editDisplayMessageDialog.open(editingIOLineWidget.getValue1Message()));
+        value0MessageButton.addActionListener(e -> editDisplayMessageDialog.open(editingIoLineWidget.getValue0Message()));
+        value1MessageButton.addActionListener(e -> editDisplayMessageDialog.open(editingIoLineWidget.getValue1Message()));
 
         this.pack();
+
+        guiSaver.saveWindowMaximized(true);
+        guiSaver.load();
 
         addWindowListener(new WindowAdapter() {
             @Override
@@ -59,9 +62,6 @@ public class EditIOLineDialog extends JDialog {
                 guiSaver.save();
             }
         });
-
-        guiSaver.saveWindowMaximized(true);
-        guiSaver.load();
     }
 
     private void onOK() {
@@ -73,11 +73,11 @@ public class EditIOLineDialog extends JDialog {
         valid = valid && trapOIDMatch ;
 
         if(valid){
-            editingIOLineWidget.setLineName(lineName.getText());
-            editingIOLineWidget.setTrapReceiveOID(trapOID.getText());
-            editingIOLineWidget.setSnmpGetOID(getOID.getText());
+            editingIoLineWidget.setLineName(lineName.getText());
+            editingIoLineWidget.setTrapReceiveOID(trapOID.getText());
+            editingIoLineWidget.setSnmpGetOID(getOID.getText());
 
-            editingIOLineWidget.applySettings();
+            editingIoLineWidget.applySettings();
 
             openResult = JOptionPane.OK_OPTION;
             dispose();
@@ -100,7 +100,7 @@ public class EditIOLineDialog extends JDialog {
     private void onDefault(){
         lineName.setText("");
 
-        switch(editingIOLineWidget.getLineNumber()){
+        switch(editingIoLineWidget.getLineNumber()){
             case "1":
                 getOID.setText("1.3.6.1.4.1.25728.8900.1.1.2.1");
                 break;
@@ -128,12 +128,12 @@ public class EditIOLineDialog extends JDialog {
         this.pack();
     }
 
-    int open(IOLineWidget ioLineWidgetIn, String lineNumberIn){
-        editingIOLineWidget = ioLineWidgetIn;
+    int open(IoLineWidget ioLineWidgetIn, String lineNumberIn){
+        editingIoLineWidget = ioLineWidgetIn;
 
-        lineName.setText(editingIOLineWidget.getNotAppliedLineName());
-        getOID.setText(editingIOLineWidget.getNotAppliedSnmpGetOID());
-        trapOID.setText(editingIOLineWidget.getNotAppliedTrapReceiveOID());
+        lineName.setText(editingIoLineWidget.getNotAppliedLineName());
+        getOID.setText(editingIoLineWidget.getNotAppliedSnmpGetOID());
+        trapOID.setText(editingIoLineWidget.getNotAppliedTrapReceiveOID());
 
         this.setTitle("Изменение линии " + lineNumberIn);
 

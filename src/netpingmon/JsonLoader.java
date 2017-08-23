@@ -11,7 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 class JsonLoader {
-    private static String loadDataFromfile(File fileIn) {
+    static String loadDataFromfile(File fileIn) {
         try {
             fileIn.createNewFile();
 

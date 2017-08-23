@@ -2,6 +2,7 @@ package netpingmon;
 
 import javax.swing.*;
 import javax.swing.border.*;
+import javax.swing.text.html.Option;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -17,10 +18,10 @@ public class NetPingWidget extends JPanel {
     private JLabel checking;
     private JPanel linesPanel;
     private JLabel ipAddressLabel;
-    private IOLineWidget line1;
-    private IOLineWidget line2;
-    private IOLineWidget line3;
-    private IOLineWidget line4;
+    private IoLineWidget line1;
+    private IoLineWidget line2;
+    private IoLineWidget line3;
+    private IoLineWidget line4;
 
     //<current netPing settings>========================================================================================
     //примненные настройки
@@ -42,9 +43,11 @@ public class NetPingWidget extends JPanel {
     private Boolean connected = null;
     private AutoChecking autoChecking;
 
-    JPopupMenu popup = new JPopupMenu();
+    private JPopupMenu popup = new JPopupMenu();
 
-    AddEditNetPingDialog addEditNetPingDialog;
+    private AddEditNetPingDialog addEditNetPingDialog;
+
+    private GridLayout gridLayout = new GridLayout();
 
     private static final String messageToolTipText = "<html>Состояние связи с NetPing:<Br>";
 
@@ -59,12 +62,12 @@ public class NetPingWidget extends JPanel {
         ipAddressApply = ipAddress.getText();
         deviceNameApply = deviceName.getText();
 
-        line1 = new IOLineWidget(this, "1");
-        line2 = new IOLineWidget(this, "2");
-        line3 = new IOLineWidget(this, "3");
-        line4 = new IOLineWidget(this, "4");
+        line1 = new IoLineWidget(this, "1");
+        line2 = new IoLineWidget(this, "2");
+        line3 = new IoLineWidget(this, "3");
+        line4 = new IoLineWidget(this, "4");
 
-        linesPanel.setLayout(new GridLayout(4, 1));
+        linesPanel.setLayout(gridLayout);
         linesPanel.add(line1);
         linesPanel.add(line2);
         linesPanel.add(line3);
@@ -146,8 +149,12 @@ public class NetPingWidget extends JPanel {
         NetPingWidget context = this;
         checkItem.addActionListener(e -> new Thread(checkFunction).start());
         editItem.addActionListener(e -> {
+            rootPanel.setBorder(etchedBorder);
             addEditNetPingDialog.setEditing(this);
-            addEditNetPingDialog.open();
+            if(addEditNetPingDialog.open() == JOptionPane.OK_OPTION){
+                mainWindow.saveOnlyNetPing(context);
+            }
+            rootPanel.setBorder(originalBorder);
             context.repaint();
         });
     }
@@ -165,6 +172,17 @@ public class NetPingWidget extends JPanel {
     String getSnmpPort(){
         return snmpPort;
     }
+    String getGridType(){
+        if(gridLayout.getColumns() == 1 && gridLayout.getRows() == 4){
+            return "1x4";
+        }else if(gridLayout.getColumns() == 2 && gridLayout.getRows() == 2){
+            return "2x2";
+        }else if(gridLayout.getColumns() == 4 && gridLayout.getRows() == 1){
+            return "4x1";
+        }
+
+        return "1x4";
+    }
     DisplayMessage getConnectedMessage(){
         return connectedMessage;
     }
@@ -174,7 +192,7 @@ public class NetPingWidget extends JPanel {
     MainWindow getMainWindow(){
         return mainWindow;
     }
-    IOLineWidget getLine(String lineNumberIn){
+    IoLineWidget getLine(String lineNumberIn){
         switch(lineNumberIn){
             case "1":
                 return line1;
@@ -201,6 +219,10 @@ public class NetPingWidget extends JPanel {
     String getNotAppliedSnmpCommunity(){
         return snmpCommunityApply;
     }
+
+    String getLoggingName(){
+        return getIpAddress() + " \"" + getDeviceName() + "\"";
+    }
     //</get>============================================================================================================
 
     //<set>=============================================================================================================
@@ -225,9 +247,33 @@ public class NetPingWidget extends JPanel {
         line3.setCheckingDelay(delayIn);
         line4.setCheckingDelay(delayIn);
     }
+    void setGridType(String typeIn){
+        if(!typeIn.equals("1x4") && !typeIn.equals("2x2") && !typeIn.equals("4x1")){
+            typeIn = "1x4";
+        }
+
+        switch(typeIn){
+            case "2x2":
+                gridLayout.setColumns(2);
+                gridLayout.setRows(2);
+                break;
+            case "4x1":
+                gridLayout.setColumns(4);
+                gridLayout.setRows(1);
+                break;
+            case "1x4":
+            default:
+                gridLayout.setColumns(1);
+                gridLayout.setRows(4);
+                break;
+        }
+
+        revalidate();
+        repaint();
+    }
 
     void setLineActive(String lineNumberIn, boolean activeIn){
-        IOLineWidget ioLineWidget = this.getLine(lineNumberIn);
+        IoLineWidget ioLineWidget = this.getLine(lineNumberIn);
         ioLineWidget.setActive(activeIn);
 
         if(activeIn){
@@ -260,11 +306,8 @@ public class NetPingWidget extends JPanel {
         if(!connected){
             connected = true;
 
-            String ip = ipAddress.getText();
-            String name = deviceName.getText();
-
-            mainWindow.getLogger().info("связь восстановлена с " + ip + " " + name);
-            mainWindow.getTrayIcon().displayMessage(mainWindow.getAppName(), "связь восстановлена с \n"+name, TrayIcon.MessageType.INFO);
+            mainWindow.getLogger().info("установлена связь с " + getLoggingName());
+            mainWindow.getTrayIcon().displayMessage(mainWindow.getAppName(), "установлена связь с \n"+getLoggingName(), TrayIcon.MessageType.INFO);
         }
     }
     private void setDisconnected(){
@@ -280,8 +323,8 @@ public class NetPingWidget extends JPanel {
             String ip = ipAddress.getText();
             String name = deviceName.getText();
 
-            mainWindow.getLogger().info("потеряна связь с " + ip + " " + name);
-            mainWindow.getTrayIcon().displayMessage(mainWindow.getAppName(), "потеряна связь с \n"+name, TrayIcon.MessageType.INFO);
+            mainWindow.getLogger().info("потеряна связь с " + getLoggingName());
+            mainWindow.getTrayIcon().displayMessage(mainWindow.getAppName(), "потеряна связь с \n"+getLoggingName(), TrayIcon.MessageType.INFO);
         }
     }
     //</set>============================================================================================================
@@ -380,7 +423,7 @@ public class NetPingWidget extends JPanel {
         line4.updateStyle();
     }
 
-    class PopupListener extends MouseAdapter {
+    private class PopupListener extends MouseAdapter {
         public void mousePressed(MouseEvent e) {
             maybeShowPopup(e);
         }

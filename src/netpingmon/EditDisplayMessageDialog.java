@@ -58,6 +58,9 @@ public class EditDisplayMessageDialog extends JDialog {
 
         this.pack();
 
+        guiSaver.saveWindowMaximized(true);
+        guiSaver.load();
+
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
@@ -65,9 +68,6 @@ public class EditDisplayMessageDialog extends JDialog {
                 guiSaver.save();
             }
         });
-
-        guiSaver.saveWindowMaximized(true);
-        guiSaver.load();
     }
 
     private void onOK() {
