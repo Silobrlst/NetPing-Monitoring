@@ -46,23 +46,23 @@ class GuiSaver {
     }
 
     //<validation>======================================================================================================
-    private void validateAttribute(JSONObject jsonIn, String nameIn, Object defaultIn){
+    private void validateJsonKey(JSONObject jsonIn, String nameIn, Object defaultIn){
         if (!jsonIn.has(nameIn)) {
             jsonIn.put(nameIn, defaultIn);
         }
     }
     private void validateGuiSettings(JSONObject jsonIn) {
-        validateAttribute(jsonIn, windowName, new JSONObject());
+        validateJsonKey(jsonIn, windowName, new JSONObject());
 
         JSONObject windowJSON = jsonIn.getJSONObject(windowName);
-        validateAttribute(windowJSON, xJsonName, 0);
-        validateAttribute(windowJSON, yJsonName, 0);
-        validateAttribute(windowJSON, widthJsonName, 0);
-        validateAttribute(windowJSON, heightJsonName, 0);
-        validateAttribute(windowJSON, maximizedJsonName, false);
+        validateJsonKey(windowJSON, xJsonName, 0);
+        validateJsonKey(windowJSON, yJsonName, 0);
+        validateJsonKey(windowJSON, widthJsonName, 0);
+        validateJsonKey(windowJSON, heightJsonName, 0);
+        validateJsonKey(windowJSON, maximizedJsonName, false);
 
         for (String splitPaneName: saveSplitPaneMap.keySet()){
-            validateAttribute(windowJSON, splitPaneName, 0);
+            validateJsonKey(windowJSON, splitPaneName, 0);
         }
     }
     //</validation>=====================================================================================================
@@ -74,7 +74,11 @@ class GuiSaver {
         JSONObject windowJson = guiJSON.getJSONObject(windowName);
 
         if(frame != null){
-            frame.setBounds(windowJson.getInt(xJsonName), windowJson.getInt(yJsonName), windowJson.getInt(widthJsonName), windowJson.getInt(heightJsonName));
+            if(windowJson.getInt(widthJsonName) != 0 && windowJson.getInt(heightJsonName) != 0){
+                frame.setBounds(windowJson.getInt(xJsonName), windowJson.getInt(yJsonName), windowJson.getInt(widthJsonName), windowJson.getInt(heightJsonName));
+            }else{
+                frame.pack();
+            }
 
             if(windowMaximizedSave){
                 if(windowJson.getBoolean(maximizedJsonName)){
@@ -84,6 +88,8 @@ class GuiSaver {
         }else if(dialog != null){
             if(windowJson.getInt(widthJsonName) != 0 && windowJson.getInt(heightJsonName) != 0){
                 dialog.setBounds(windowJson.getInt(xJsonName), windowJson.getInt(yJsonName), windowJson.getInt(widthJsonName), windowJson.getInt(heightJsonName));
+            }else{
+                dialog.pack();
             }
         }
 

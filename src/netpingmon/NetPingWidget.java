@@ -75,9 +75,11 @@ public class NetPingWidget extends JPanel {
 
         connectedMessage.setBackgroundColor(DefaultSettings.backgroundColorConnected);
         connectedMessage.setTextColor(DefaultSettings.textColorConnected);
+        connectedMessage.applySettings();
 
         disconnectedMessage.setBackgroundColor(DefaultSettings.backgroundColorDisconnected);
         disconnectedMessage.setTextColor(DefaultSettings.textColorDisconnected);
+        disconnectedMessage.applySettings();
 
         this.add(rootPanel);
         this.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -334,6 +336,7 @@ public class NetPingWidget extends JPanel {
         netPingWidgetIn.setDeviceName(getDeviceName());
         netPingWidgetIn.setSnmpCommunity(getSnmpCommunity());
         netPingWidgetIn.setSnmpPort(getSnmpPort());
+        netPingWidgetIn.setGridType(getGridType());
 
         connectedMessage.copyTo(netPingWidgetIn.getConnectedMessage());
         disconnectedMessage.copyTo(netPingWidgetIn.getDisconnectedMessage());

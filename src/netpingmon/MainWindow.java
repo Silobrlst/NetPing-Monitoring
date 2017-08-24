@@ -53,6 +53,8 @@ public class MainWindow extends JFrame implements CommandResponder {
 
     private LogsWindow logsWindow = new LogsWindow();
 
+    private final Image appIcon = Toolkit.getDefaultToolkit().getImage("appIcon.png");
+
     private void initTrayIcon() {
         PopupMenu trayMenu = new PopupMenu();
 
@@ -68,8 +70,9 @@ public class MainWindow extends JFrame implements CommandResponder {
         item.addActionListener(e -> System.exit(0));
         trayMenu.add(item);
 
-        Image icon = Toolkit.getDefaultToolkit().getImage("icon.png");
-        trayIcon = new TrayIcon(icon, "Netping мониторинг", trayMenu);
+        trayIcon = new TrayIcon(appIcon, appName, trayMenu);
+        trayIcon.setImageAutoSize(true);
+        trayIcon.addActionListener(e -> this.setVisible(true));
     }
 
     private void init() {
@@ -142,6 +145,7 @@ public class MainWindow extends JFrame implements CommandResponder {
         snmpPort = snmpPortIn;
 
         this.setTitle(appName);
+        setIconImage(appIcon);
         appStatus.setText("Запуск...");
 
         initTrayIcon();

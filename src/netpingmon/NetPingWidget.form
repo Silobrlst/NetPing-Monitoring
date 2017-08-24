@@ -43,7 +43,7 @@
         <properties>
           <font size="16" style="3"/>
           <text value="Имя устройства"/>
-          <toolTipText value="Имя NetPing"/>
+          <toolTipText value="Имя NetPing устройства"/>
         </properties>
       </component>
       <grid id="14801" binding="linesPanel" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
