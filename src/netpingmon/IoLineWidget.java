@@ -45,7 +45,8 @@ public class IoLineWidget extends JPanel {
     private AutoChecking autoChecking;
     private NetPingWidget netPingWidget;
     private int currentState;
-    private boolean active;
+    private boolean active = DefaultSettings.active;
+    private boolean snmpInitialized = false;
 
     private JPopupMenu popup = new JPopupMenu();
 
@@ -112,7 +113,7 @@ public class IoLineWidget extends JPanel {
         currentState = -1;
 
         Runnable checkFunction = () -> {
-            if(trapReceiveOID == null || snmpGetOID == null || netPingWidget.getMainWindow().getSnmp() == null){
+            if(trapReceiveOID == null || snmpGetOID == null || netPingWidget.getMainWindow().getSnmp() == null || !netPingWidget.isActive()){
                 return;
             }
 
@@ -256,9 +257,13 @@ public class IoLineWidget extends JPanel {
 
     void setActive(boolean activeIn){
         if(activeIn && !active){
-            autoChecking.start();
+            if(snmpInitialized) {
+                autoChecking.start();
+                netPingWidget.getMainWindow().getLogger().info(getLoggingName() + ": мониторинг линии запущен");
+            }
         }else if(!activeIn && active){
             autoChecking.stop();
+            netPingWidget.getMainWindow().getLogger().info(getLoggingName() + ": мониторинг линии остановлен");
         }
 
         active = activeIn;
@@ -305,7 +310,9 @@ public class IoLineWidget extends JPanel {
     }
 
     void snmpInitialized(){
-        if(isActive()){
+        snmpInitialized = true;
+
+        if(active){
             autoChecking.start();
         }
     }

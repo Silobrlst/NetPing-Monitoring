@@ -28,6 +28,7 @@ public class AddEditNetPingDialog extends JDialog {
     private JButton connectedMessageButton;
     private JButton disconnectedMessageButton;
     private JComboBox gridType;
+    private JCheckBox activeCheckBox;
 
     private boolean editing; //режим редактирования - true, режим добавления - false
     private NetPingWidget editingNetPingWidget;
@@ -103,14 +104,6 @@ public class AddEditNetPingDialog extends JDialog {
 
         guiSaver.saveWindowMaximized(true);
         guiSaver.load();
-
-        addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                super.windowClosing(e);
-                guiSaver.save();
-            }
-        });
     }
 
     //<on>==============================================================================================================
@@ -128,6 +121,7 @@ public class AddEditNetPingDialog extends JDialog {
         }
 
         if(valid){
+            editingNetPingWidget.setActive(activeCheckBox.isSelected());
             editingNetPingWidget.setIpAddress(ipAddress.getText());
             editingNetPingWidget.setSnmpPort(snmpPort.getText());
             editingNetPingWidget.setSnmpCommunity(community.getText());
@@ -142,6 +136,7 @@ public class AddEditNetPingDialog extends JDialog {
 
             editingNetPingWidget.applySettings();
 
+            guiSaver.save();
             openResult = JOptionPane.OK_OPTION;
             dispose();
         }else{
@@ -168,6 +163,7 @@ public class AddEditNetPingDialog extends JDialog {
         line4CheckBox.setSelected(true);
     }
     private void onCancel() {
+        guiSaver.save();
         openResult = JOptionPane.CANCEL_OPTION;
         dispose();
     }
@@ -178,6 +174,7 @@ public class AddEditNetPingDialog extends JDialog {
 
         editing = false;
         editingNetPingWidget = netPingWidgetIn;
+        activeCheckBox.setSelected(DefaultSettings.active);
         ipAddress.setText(netPingWidgetIn.getIpAddress());
         deviceName.setText("");
         this.setTitle("Добавление NetPing");
@@ -189,6 +186,7 @@ public class AddEditNetPingDialog extends JDialog {
 
         editing = false;
         editingNetPingWidget = newNetPingWidgetIn;
+        activeCheckBox.setSelected(newNetPingWidgetIn.isActive());
         ipAddress.setText(newNetPingWidgetIn.getNotAppliedIpAddress());
         deviceName.setText(newNetPingWidgetIn.getNotAppliedDeviceName());
         community.setText(newNetPingWidgetIn.getNotAppliedSnmpCommunity());
@@ -211,6 +209,7 @@ public class AddEditNetPingDialog extends JDialog {
 
         editing = true;
         editingNetPingWidget = netPingWidgetIn;
+        activeCheckBox.setSelected(editingNetPingWidget.isActive());
         ipAddress.setText(editingNetPingWidget.getNotAppliedIpAddress());
         deviceName.setText(editingNetPingWidget.getNotAppliedDeviceName());
         community.setText(editingNetPingWidget.getNotAppliedSnmpCommunity());

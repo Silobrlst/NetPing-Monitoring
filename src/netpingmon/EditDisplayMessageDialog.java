@@ -77,11 +77,13 @@ public class EditDisplayMessageDialog extends JDialog {
 
         editingDisplayMessage.applySettings();
 
+        guiSaver.save();
         openResult = JOptionPane.OK_OPTION;
         dispose();
     }
 
     private void onCancel() {
+        guiSaver.save();
         openResult = JOptionPane.CANCEL_OPTION;
         dispose();
     }

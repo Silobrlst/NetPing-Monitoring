@@ -54,14 +54,6 @@ public class EditIoLineDialog extends JDialog {
 
         guiSaver.saveWindowMaximized(true);
         guiSaver.load();
-
-        addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                super.windowClosing(e);
-                guiSaver.save();
-            }
-        });
     }
 
     private void onOK() {
@@ -79,6 +71,7 @@ public class EditIoLineDialog extends JDialog {
 
             editingIoLineWidget.applySettings();
 
+            guiSaver.save();
             openResult = JOptionPane.OK_OPTION;
             dispose();
         }else{
@@ -93,6 +86,7 @@ public class EditIoLineDialog extends JDialog {
     }
 
     private void onCancel() {
+        guiSaver.save();
         openResult = JOptionPane.CANCEL_OPTION;
         dispose();
     }

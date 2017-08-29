@@ -3,8 +3,10 @@ package netpingmon;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
+import javax.swing.table.TableRowSorter;
 import java.awt.event.*;
 import java.util.*;
+import java.util.List;
 
 public class SettingsDialog extends JDialog implements ApplyInterface {
     private JPanel contentPane;
@@ -28,6 +30,13 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
     private JButton copyButton;
     private JTextField gridColumns;
     private JTextField gridRows;
+
+    //<table columns>===================================================================================================
+    private static final int ipAddressColumn = 0;
+    private static final int nameColumn = 1;
+    private static final int activeColumn = 2;
+    private static final int netPingWidgetColumn = 3;
+    //</table columns>==================================================================================================
 
     private AddEditNetPingDialog addEditNetPingDialog;
     private MainWindow mainWindow;
@@ -68,13 +77,18 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
         Vector<String> head = new Vector<>();
         head.add("ip-адрес");
         head.add("имя");
+        head.add("активен");
         head.add("виджет");
 
         model = new NetPingTableModel(head);
         netPingsTable.setModel(model);
 
+        TableRowSorter<NetPingTableModel> sorter = new TableRowSorter<>(model);
+        netPingsTable.setRowSorter(sorter);
+        netPingsTable.updateUI();
+
         TableColumnModel tcm = netPingsTable.getColumnModel();
-        tcm.removeColumn(tcm.getColumn(2));
+        tcm.removeColumn(tcm.getColumn(netPingWidgetColumn));
 
         addEditNetPingDialog = new AddEditNetPingDialog(mainWindow);
 
@@ -89,29 +103,24 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
         this.pack();
 
         guiSaver.saveWindowMaximized(true);
+        guiSaver.saveTableSortKeys(sorter, "sorter");
         guiSaver.load();
-
-        addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                super.windowClosing(e);
-                guiSaver.save();
-            }
-        });
     }
 
     //<on>==============================================================================================================
     private void onOK() {
         if(applyAll()){
+            guiSaver.save();
             dispose();
         }
     }
     private void onCancel() {
         //отменяем настройки для каждого netPing
         for(int i=0; i<model.getRowCount(); i++){
-            ((NetPingWidget)model.getValueAt(i, 2)).discardSettings();
+            model.getNetPingWidget(i).discardSettings();
         }
 
+        guiSaver.save();
         dispose();
     }
     private void onDefault(){
@@ -159,25 +168,22 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
         }
     }
     private void onDelete(){
-        //сортируем для правильного удаления
-        int[] primitiveRows = netPingsTable.getSelectedRows();
+        int dialogResult = JOptionPane.showConfirmDialog(null, "Удалить выбранные устройства?", "Удаление", JOptionPane.YES_NO_OPTION);
+        if(dialogResult == JOptionPane.YES_OPTION){
+            int[] rows = netPingsTable.getSelectedRows();
 
-        ArrayList<Integer> rows = new ArrayList<>();
-        for(int row: primitiveRows){
-            rows.add(row);
+            List<NetPingWidget> toRemove = new ArrayList<>();
+            for(int i=0;i<rows.length;i++){
+                int row = netPingsTable.convertRowIndexToModel(rows[i]-i);
+
+                toRemove.add(model.getNetPingWidget(row));
+                model.removeRow(row);
+            }
+
+            removedNetPings(toRemove);
+
+            validationStatus.setText("");
         }
-
-        Collections.sort(rows, Collections.reverseOrder());
-
-        List<NetPingWidget> toRemove = new ArrayList<>();
-        for (int row: rows){
-            toRemove.add(model.getNetPingWidget(row));
-            model.removeRow(row);
-        }
-
-        removedNetPings(toRemove);
-
-        validationStatus.setText("");
     }
     private void onShown(){
         trayIcon.setSelected(mainWindow.getTrayIconVisible());
@@ -243,7 +249,8 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
 
             //применяем настройки для каждого netPing
             for(int i=0; i<model.getRowCount(); i++){
-                NetPingWidget netPingWidget = ((NetPingWidget)model.getValueAt(i, 2));
+                NetPingWidget netPingWidget = (model.getNetPingWidget(i));
+                netPingWidget.setActive(model.isNetPingActive(i));
                 netPingWidget.applySettings();
             }
 
@@ -318,7 +325,7 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
     Collection<NetPingWidget> getNetPingWidgets(){
         ArrayList<NetPingWidget> netPingWidgets = new ArrayList<>();
         for(int i=0; i<model.getRowCount(); i++){
-            netPingWidgets.add((NetPingWidget)model.getValueAt(i, 2));
+            netPingWidgets.add(model.getNetPingWidget(i));
         }
 
         return netPingWidgets;
@@ -334,6 +341,7 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
             Object[] row = {
                     netPingWidgetIn.getNotAppliedIpAddress(),
                     netPingWidgetIn.getNotAppliedDeviceName(),
+                    netPingWidgetIn.isActive(),
                     netPingWidgetIn
             };
 
@@ -342,12 +350,13 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
 
         void setNotAppliedNetPingWidgetSettings(int rowIn){
             NetPingWidget netPingWidget = this.getNetPingWidget(rowIn);
-            this.setValueAt(netPingWidget.getNotAppliedIpAddress(), rowIn, 0);
-            this.setValueAt(netPingWidget.getNotAppliedDeviceName(), rowIn, 1);
+            this.setValueAt(new Boolean(netPingWidget.isActive()), rowIn, activeColumn);
+            this.setValueAt(netPingWidget.getNotAppliedIpAddress(), rowIn, ipAddressColumn);
+            this.setValueAt(netPingWidget.getNotAppliedDeviceName(), rowIn, nameColumn);
         }
 
         NetPingWidget getNetPingWidget(int rowIn){
-            return (NetPingWidget)this.getValueAt(rowIn, 2);
+            return (NetPingWidget)this.getValueAt(rowIn, netPingWidgetColumn);
         }
 
         void clear(){
@@ -357,7 +366,27 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
         }
 
         public boolean isCellEditable(int row, int column) {
+            if(column == activeColumn){
+                return true;
+            }
             return false;
+        }
+
+        public Class getColumnClass(int column) {
+            switch (column) {
+                case ipAddressColumn:
+                    return String.class;
+                case nameColumn:
+                    return String.class;
+                case activeColumn:
+                    return Boolean.class;
+                default:
+                    return String.class;
+            }
+        }
+
+        public boolean isNetPingActive(int rowIn){
+            return (boolean)getValueAt(rowIn, activeColumn);
         }
     }
 }

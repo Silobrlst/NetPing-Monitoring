@@ -29,4 +29,6 @@ class DefaultSettings {
     static final String linesGridType = "1x4";
 
     static final String snmpGetLine1Oid = "1.3.6.1.4.1.25728.8900.1.1.2.1";
+
+    static final boolean active = true;
 }

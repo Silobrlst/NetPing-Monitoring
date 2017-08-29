@@ -28,7 +28,7 @@ public class SettingsLoader {
     private static final String line2JsonName = "line2";
     private static final String line3JsonName = "line3";
     private static final String line4JsonName = "line4";
-    private static final String lineActiveJsonName = "active";
+    private static final String activeJsonName = "active";
     private static final String value0MessageJsonName = "value0Message";
     private static final String value1MessageJsonName = "value1Message";
     private static final String connectedMessageJsonName = "connectedMessage";
@@ -75,7 +75,7 @@ public class SettingsLoader {
         validateJsonKey(ioLineJSONIn, nameJsonName, "");
         validateJsonKey(ioLineJSONIn, getOID, DefaultSettings.snmpGetLine1Oid);
         validateJsonKey(ioLineJSONIn, trapOID, DefaultSettings.snmpTrapPort);
-        validateJsonKey(ioLineJSONIn, lineActiveJsonName, true);
+        validateJsonKey(ioLineJSONIn, activeJsonName, true);
         validateJsonKey(ioLineJSONIn, value0MessageJsonName, new JSONObject());
         validateJsonKey(ioLineJSONIn, value1MessageJsonName, new JSONObject());
 
@@ -89,6 +89,7 @@ public class SettingsLoader {
         validateJsonKey(netPingJSONIn, connectedMessageJsonName, new JSONObject());
         validateJsonKey(netPingJSONIn, disconnectedMessageJsonName, new JSONObject());
         validateJsonKey(netPingJSONIn, linesGridTypeJsonName, DefaultSettings.linesGridType);
+        validateJsonKey(netPingJSONIn, activeJsonName, DefaultSettings.active);
         validateJsonKey(netPingJSONIn, line1JsonName, new JSONObject());
         validateJsonKey(netPingJSONIn, line2JsonName, new JSONObject());
         validateJsonKey(netPingJSONIn, line3JsonName, new JSONObject());
@@ -145,7 +146,7 @@ public class SettingsLoader {
         loadDisplayMessage(ioLineWidget.getValue1Message(), ioLineJSONIn.getJSONObject(value1MessageJsonName));
 
         ioLineWidget.applySettings();
-        netPingWidgetIn.setLineActive(lineNumberIn, ioLineJSONIn.getBoolean(lineActiveJsonName));
+        netPingWidgetIn.setLineActive(lineNumberIn, ioLineJSONIn.getBoolean(activeJsonName));
     }
     private static NetPingWidget loadNetPing(MainWindow mainWindowIn, String ipAddressIn, JSONObject netPingJsonIn){
         validateNetPing(netPingJsonIn);
@@ -155,6 +156,7 @@ public class SettingsLoader {
         netPingWidget.setSnmpCommunity(netPingJsonIn.getString(snmpCommunityJsonName));
         netPingWidget.setSnmpPort(netPingJsonIn.getString(snmpPortJsonName));
         netPingWidget.setGridType(netPingJsonIn.getString(linesGridTypeJsonName));
+        netPingWidget.setActive(netPingJsonIn.getBoolean(activeJsonName));
 
         loadDisplayMessage(netPingWidget.getConnectedMessage(), netPingJsonIn.getJSONObject(connectedMessageJsonName));
         loadDisplayMessage(netPingWidget.getDisconnectedMessage(), netPingJsonIn.getJSONObject(disconnectedMessageJsonName));
@@ -204,6 +206,7 @@ public class SettingsLoader {
         netPingJSON.put(snmpCommunityJsonName, netPingWidgetIn.getSnmpCommunity());
         netPingJSON.put(snmpPortJsonName, netPingWidgetIn.getSnmpPort());
         netPingJSON.put(linesGridTypeJsonName, netPingWidgetIn.getGridType());
+        netPingJSON.put(activeJsonName, netPingWidgetIn.isActive());
 
         JSONObject connectedMessageJson = new JSONObject();
         saveDisplayMessage(netPingWidgetIn.getConnectedMessage(), connectedMessageJson);
@@ -242,7 +245,7 @@ public class SettingsLoader {
         lineJSON.put(nameJsonName, ioLineWidget.getLineName());
         lineJSON.put(getOID, ioLineWidget.getSnmpGetOID());
         lineJSON.put(trapOID, ioLineWidget.getTrapReceiveOID());
-        lineJSON.put(lineActiveJsonName, ioLineWidget.isActive());
+        lineJSON.put(activeJsonName, ioLineWidget.isActive());
 
         JSONObject value0MessageJSON = new JSONObject();
         saveDisplayMessage(netPingWidgetIn.getLine(lineNumberIn).getValue0Message(), value0MessageJSON);

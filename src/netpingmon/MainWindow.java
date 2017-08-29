@@ -19,7 +19,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.List;
@@ -76,7 +75,6 @@ public class MainWindow extends JFrame implements CommandResponder {
     }
 
     private void init() {
-
         netPingGrid.setLayout(gridLayout);
 
         MainWindow mainWindowContext = this;

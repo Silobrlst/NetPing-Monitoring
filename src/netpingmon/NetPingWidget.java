@@ -51,6 +51,9 @@ public class NetPingWidget extends JPanel {
 
     private static final String messageToolTipText = "<html>Состояние связи с NetPing:<Br>";
 
+    private boolean snmpInitialized = false;
+    private boolean active = DefaultSettings.active;
+
     NetPingWidget(MainWindow mainWindowIn, String ipAddressIn){
         mainWindow = mainWindowIn;
 
@@ -288,13 +291,23 @@ public class NetPingWidget extends JPanel {
         linesPanel.repaint();
     }
     void setActive(boolean activeIn){
-        if(!activeIn){
-            autoChecking.start();
-            line1.setActive(false);
-            line2.setActive(false);
-            line3.setActive(false);
-            line4.setActive(false);
+        if(activeIn && !active){
+            if(snmpInitialized){
+                this.setVisible(true);
+
+                autoChecking.start();
+
+                mainWindow.getLogger().info(getLoggingName() + ": мониторинг устройства NetPing запущен");
+            }
+        }else if(!activeIn && active){
+            this.setVisible(false);
+
+            autoChecking.stop();
+
+            mainWindow.getLogger().info(getLoggingName() + ": мониторинг устройства NetPing остановлен");
         }
+
+        active = activeIn;
     }
 
     //изменение состояния связи с NetPing
@@ -331,6 +344,10 @@ public class NetPingWidget extends JPanel {
     }
     //</set>============================================================================================================
 
+    boolean isActive(){
+        return active;
+    }
+
     //копирует все настройки (кроме ip-адрес) этого netPing'а в netPingWidgetIn
     void copyTo(NetPingWidget netPingWidgetIn){
         netPingWidgetIn.setDeviceName(getDeviceName());
@@ -350,7 +367,11 @@ public class NetPingWidget extends JPanel {
     }
 
     void snmpInitialized(){
-        autoChecking.start();
+        snmpInitialized = true;
+
+        if(active){
+            autoChecking.start();
+        }
 
         line1.snmpInitialized();
         line2.snmpInitialized();
