@@ -125,7 +125,7 @@ public class IoLineWidget extends JPanel {
             CommunityTarget comTarget = new CommunityTarget();
             comTarget.setCommunity(new OctetString(netPingWidget.getSnmpCommunity()));
             comTarget.setVersion(SnmpConstants.version1);
-            comTarget.setAddress(new UdpAddress(netPingWidget.getIpAddress() + "/162"));
+            comTarget.setAddress(new UdpAddress(netPingWidget.getIpAddress() + "/" + netPingWidget.getSnmpPort()));
             comTarget.setRetries(netPingWidget.getMainWindow().getRetries());
             comTarget.setTimeout(netPingWidget.getMainWindow().getTimeOut());
 
