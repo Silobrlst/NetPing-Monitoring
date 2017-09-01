@@ -20,7 +20,7 @@ public class LogsWindow extends JFrame {
     private Thread thread;
     private Runnable updateLog;
 
-    LogsWindow(){
+    LogsWindow(MainWindow mainWindowIn){
         setTitle("Журнал событий NetPing");
 
         getContentPane().add(rootPanel);
@@ -46,6 +46,7 @@ public class LogsWindow extends JFrame {
             @Override
             public void windowClosing(WindowEvent e) {
                 super.windowClosing(e);
+                mainWindowIn.setNewEventsLooked();
                 guiSaver.save();
             }
         });

@@ -2,6 +2,8 @@ package netpingmon;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.*;
+import org.apache.logging.log4j.core.config.Configuration;
 import org.snmp4j.*;
 import org.snmp4j.log.LogFactory;
 import org.snmp4j.mp.*;
@@ -20,8 +22,10 @@ import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.*;
 import java.util.List;
+import java.util.Timer;
 
 public class MainWindow extends JFrame implements CommandResponder {
     private JLabel appStatus;
@@ -50,9 +54,14 @@ public class MainWindow extends JFrame implements CommandResponder {
 
     private GuiSaver guiSaver = new GuiSaver(this, "MainWindow");
 
-    private LogsWindow logsWindow = new LogsWindow();
+    private LogsWindow logsWindow = new LogsWindow(this);
 
     private final Image appIcon = Toolkit.getDefaultToolkit().getImage("appIcon.png");
+
+    private boolean newEvents = false;
+
+    private int counter = 255;
+    private int counter2 = 0;
 
     private void initTrayIcon() {
         PopupMenu trayMenu = new PopupMenu();
@@ -401,5 +410,54 @@ public class MainWindow extends JFrame implements CommandResponder {
     }
     void saveOnlyIoLine(NetPingWidget netPingWidgetIn, IoLineWidget ioLineWidgetIn){
         settingsLoader.saveOnlyIoLine(netPingWidgetIn, ioLineWidgetIn);
+    }
+
+    void logEvent(String textIn){
+        logger.info(textIn);
+
+        if(!newEvents){
+            newEvents = true;
+
+            Color originalBg = logsButton.getBackground();
+            Color originalFg = logsButton.getForeground();
+
+            Timer timer = new Timer();
+            TimerTask timerTask = new TimerTask() {
+                @Override
+                public void run() {
+                    Thread thread = new Thread(() -> {
+                        if(newEvents && !logsWindow.isFocused()){
+                            if(counter2 == 0){
+                                if(counter > 0){
+                                    counter--;
+                                }
+                                if(counter == 0){
+                                    counter = 255;
+                                    counter2 = 200;
+                                }
+
+                                logsButton.setBackground(new Color(counter, counter, 0));
+                                logsButton.setForeground(new Color(255-counter, 255-counter, 255));
+                            }
+                        }else{
+                            logsButton.setBackground(originalBg);
+                            logsButton.setForeground(originalFg);
+                        }
+
+                        if(counter2 > 0){
+                            counter2--;
+                        }
+                    });
+                    thread.start();
+                }
+            };
+            timer.scheduleAtFixedRate(timerTask, 0, 10);
+        }
+
+        newEvents = true;
+    }
+
+    void setNewEventsLooked(){
+        newEvents = false;
     }
 }

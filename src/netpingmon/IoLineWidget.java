@@ -271,28 +271,36 @@ public class IoLineWidget extends JPanel {
 
     //изменение состояния линии
     void set0(){
+        if(currentState != 0){
+            netPingWidget.getMainWindow().logEvent(changedStateLog("0 \"" + value0Message.getMessageText() + "\""));
+            netPingWidget.getMainWindow().getTrayIcon().displayMessage("изменение состояния линии", getLoggingName() + "\n\"" + value0Message.getMessageText() + "\"", TrayIcon.MessageType.INFO);
+        }
+
         applyDisplayMessage(value0Message);
         currentState = 0;
-
-        netPingWidget.getMainWindow().getLogger().info(changedStateLog("0 \"" + value0Message.getMessageText() + "\""));
-        netPingWidget.getMainWindow().getTrayIcon().displayMessage("изменение состояния линии", getLoggingName() + "\n\"" + value0Message.getMessageText() + "\"", TrayIcon.MessageType.INFO);
     }
     void set1(){
+        if(currentState != 1){
+            netPingWidget.getMainWindow().logEvent(changedStateLog("1 \"" + value1Message.getMessageText() + "\""));
+            netPingWidget.getMainWindow().getTrayIcon().displayMessage("изменение состояния линии", getLoggingName() + "\n\"" + value1Message.getMessageText() + "\"", TrayIcon.MessageType.INFO);
+        }
+
         applyDisplayMessage(value1Message);
         currentState = 1;
-
-        netPingWidget.getMainWindow().getLogger().info(changedStateLog("1 \"" + value1Message.getMessageText() + "\""));
-        netPingWidget.getMainWindow().getTrayIcon().displayMessage("изменение состояния линии", getLoggingName() + "\n\"" + value1Message.getMessageText() + "\"", TrayIcon.MessageType.INFO);
     }
     void setError(String commentIn){
+        if(currentState != 2){
+            netPingWidget.getMainWindow().logEvent(changedStateLog("\"ошибка\""));
+            netPingWidget.getMainWindow().getTrayIcon().displayMessage("изменение состояния линии", getLoggingName() + "\n\"ошибка\"", TrayIcon.MessageType.INFO);
+        }
+
         rootPanel.setBackground(defaultBackgroundColor);
         messageText.setText("Ошибка");
         messageText.setToolTipText(messageToolTipText + commentIn + "</html>");
         messageText.setForeground(Color.BLACK);
         lineName.setForeground(Color.BLACK);
 
-//        netPingWidget.getMainWindow().getLogger().info(changedStateLog("\"ошибка\""));
-//        netPingWidget.getMainWindow().getTrayIcon().displayMessage("изменение состояния линии", getLoggingName() + "\n\"ошибка\"", TrayIcon.MessageType.INFO);
+        currentState = 2;
     }
     //</set>============================================================================================================
 

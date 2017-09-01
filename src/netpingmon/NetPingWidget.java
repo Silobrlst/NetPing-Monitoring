@@ -321,7 +321,7 @@ public class NetPingWidget extends JPanel {
         if(!connected){
             connected = true;
 
-            mainWindow.getLogger().info("установлена связь с " + getLoggingName());
+            mainWindow.logEvent("установлена связь с " + getLoggingName());
             mainWindow.getTrayIcon().displayMessage(mainWindow.getAppName(), "установлена связь с \n"+getLoggingName(), TrayIcon.MessageType.INFO);
         }
     }
@@ -338,7 +338,7 @@ public class NetPingWidget extends JPanel {
             String ip = ipAddress.getText();
             String name = deviceName.getText();
 
-            mainWindow.getLogger().info("потеряна связь с " + getLoggingName());
+            mainWindow.logEvent("потеряна связь с " + getLoggingName());
             mainWindow.getTrayIcon().displayMessage(mainWindow.getAppName(), "потеряна связь с \n"+getLoggingName(), TrayIcon.MessageType.INFO);
         }
     }
