@@ -366,10 +366,7 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
         }
 
         public boolean isCellEditable(int row, int column) {
-            if(column == activeColumn){
-                return true;
-            }
-            return false;
+            return column == activeColumn;
         }
 
         public Class getColumnClass(int column) {
@@ -385,7 +382,7 @@ public class SettingsDialog extends JDialog implements ApplyInterface {
             }
         }
 
-        public boolean isNetPingActive(int rowIn){
+        boolean isNetPingActive(int rowIn){
             return (boolean)getValueAt(rowIn, activeColumn);
         }
     }

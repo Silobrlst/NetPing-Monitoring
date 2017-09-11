@@ -2,7 +2,6 @@ package netpingmon;
 
 import javax.swing.*;
 import javax.swing.border.*;
-import javax.swing.text.html.Option;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -35,8 +34,8 @@ public class NetPingWidget extends JPanel {
     //новые непримёненные настройки, применятся после вызова applySettings()
     private String snmpCommunityApply = snmpCommunity;
     private String snmpPortApply = snmpPort;
-    private String deviceNameApply = deviceName.getText();
-    private String ipAddressApply = ipAddress.getText();
+    private String deviceNameApply = "";
+    private String ipAddressApply = "192.168.0.1";
     //</to apply netPing settings>======================================================================================
 
     private MainWindow mainWindow;
@@ -334,9 +333,6 @@ public class NetPingWidget extends JPanel {
 
         if(connected){
             connected = false;
-
-            String ip = ipAddress.getText();
-            String name = deviceName.getText();
 
             mainWindow.logEvent("потеряна связь с " + getLoggingName());
             mainWindow.getTrayIcon().displayMessage(mainWindow.getAppName(), "потеряна связь с \n"+getLoggingName(), TrayIcon.MessageType.INFO);
